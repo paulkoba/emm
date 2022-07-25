@@ -20,5 +20,15 @@ fn main() -> i32 {
     let num3erw1thme55edupn4m3 = d;
     let n1: i32;
 
+    if (d >= 5) {
+        d = 2;
+    }
+
+    let e = "Hello, world!";
+    let f = "Hello, \"world\"!";
+    let g: String = e;
+
+    println("Hello, world!");
+
     return d;
 }

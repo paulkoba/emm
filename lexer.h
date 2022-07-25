@@ -12,6 +12,7 @@ enum LexerState {
     LEXER_STATE_START,
     LEXER_STATE_NUMBER,
     LEXER_STATE_IDENTIFIER,
+    LEXER_STATE_STRING,
 };
 
 std::vector<Token> lex(const std::string& input) {
@@ -30,7 +31,7 @@ std::vector<Token> lex(const std::string& input) {
             }
         }
 
-        if(current.type != TOK_NONE && current.type != TOK_STRING) {
+        if(current.type != TOK_NONE) {
             tokens.push_back(current);
         }
 
@@ -38,6 +39,32 @@ std::vector<Token> lex(const std::string& input) {
     };
 
     while(pos < input.size()) {
+        if(state == LEXER_STATE_STRING) {
+            if(input[pos] == '"') {
+                if(!current.literal.empty() && current.literal.back() == '\\') {
+                    current.literal.pop_back();
+                    current.literal += '"';
+                } else {
+                    state = LEXER_STATE_START;
+                    addPreviousToken();
+                }
+            } else {
+                current.literal += input[pos];
+            }
+            pos++;
+            continue;
+        }
+
+        if(input[pos] == '"') {
+            if(state != LEXER_STATE_START) {
+                addPreviousToken();
+            }
+            state = LEXER_STATE_STRING;
+            current.type = TOK_STRING;
+            pos++;
+            continue;
+        }
+
         if(input[pos] == ' ' || input[pos] == '\t') {
             if(state != LEXER_STATE_START) {
                 addPreviousToken();
@@ -127,7 +154,11 @@ std::vector<Token> lex(const std::string& input) {
 
         if(tt == TOK_ASSIGN) {
             if(current.type == TOK_ASSIGN) {
-                current = {TOK_EQUAL, "==", line};
+                current = {TOK_EQUALS, "==", line};
+            } else if(current.type == TOK_LESS) {
+                current = {TOK_LESS_OR_EQUAL, "<=", line};
+            } else if(current.type == TOK_GREATER) {
+                current = {TOK_GREATER_OR_EQUAL, ">=", line};
             } else {
                 addPreviousToken();
                 current = {TOK_ASSIGN, "=", line};
@@ -136,7 +167,7 @@ std::vector<Token> lex(const std::string& input) {
             continue;
         }
 
-        std::cout << "Unknown character: " << input[pos] << std::endl;
+        std::cout << "Unexpected character: " << input[pos] << " at line " << line << std::endl;
         return {};
     }
 

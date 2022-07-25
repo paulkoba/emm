@@ -26,23 +26,25 @@ enum TokenType {
     TOK_MINUS = -13,
     TOK_PRODUCT = -14,
     TOK_DIVISION = -15,
-    TOK_EQUAL = -16,
+    TOK_EQUALS = -16,
     TOK_ASSIGN = -17,
     TOK_GREATER = -18,
     TOK_LESS = -19,
     TOK_OUTPUT_TYPE = -20,
     TOK_SEMICOLON = -21,
+    TOK_LESS_OR_EQUAL = -22,
+    TOK_GREATER_OR_EQUAL = -23,
 
     // KEYWORDS
-    TOK_IF = -22,
-    TOK_ELSE = -23,
-    TOK_WHILE = -24,
-    TOK_RETURN = -25,
-    TOK_LET = -26,
-    TOK_FN = -27,
-    TOK_TRUE = -28,
-    TOK_FALSE = -29,
-    TOK_MUT = -30,
+    TOK_IF = -100,
+    TOK_ELSE = -101,
+    TOK_WHILE = -102,
+    TOK_RETURN = -103,
+    TOK_LET = -104,
+    TOK_FN = -105,
+    TOK_TRUE = -106,
+    TOK_FALSE = -107,
+    TOK_MUT = -108,
 };
 
 // TODO: Get rid of static variable
@@ -60,59 +62,6 @@ TokenType tryMatchKeyword(const std::string& input) {
     };
 
     return keywords.count(input) ? keywords[input] : TOK_NONE;
-}
-
-std::string tokenTypeToString(TokenType type) {
-    switch (type) {
-        case TOK_NONE: return "TOK_NONE";
-        case TOK_EOF: return "TOK_EOF";
-        case TOK_IDENTIFIER: return "TOK_IDENTIFIER";
-        case TOK_INTEGER: return "TOK_INTEGER";
-        case TOK_STRING: return "TOK_STRING";
-        case TOK_LPAREN: return "TOK_LPAREN";
-        case TOK_RPAREN: return "TOK_RPAREN";
-        case TOK_LBRACE: return "TOK_LBRACE";
-        case TOK_RBRACE: return "TOK_RBRACE";
-        case TOK_LBRACKET: return "TOK_LBRACKET";
-        case TOK_RBRACKET: return "TOK_RBRACKET";
-        case TOK_COLON: return "TOK_COLON";
-        case TOK_PLUS: return "TOK_PLUS";
-        case TOK_MINUS: return "TOK_MINUS";
-        case TOK_PRODUCT: return "TOK_PRODUCT";
-        case TOK_DIVISION: return "TOK_DIVISION";
-        case TOK_EQUAL: return "TOK_EQUAL";
-        case TOK_ASSIGN: return "TOK_ASSIGN";
-        case TOK_GREATER: return "TOK_GREATER";
-        case TOK_LESS: return "TOK_LESS";
-        case TOK_OUTPUT_TYPE: return "TOK_OUTPUT_TYPE";
-        case TOK_SEMICOLON: return "TOK_SEMICOLON";
-        case TOK_IF: return "TOK_IF";
-        case TOK_ELSE: return "TOK_ELSE";
-        case TOK_WHILE: return "TOK_WHILE";
-        case TOK_RETURN: return "TOK_RETURN";
-        case TOK_LET: return "TOK_LET";
-        case TOK_FN: return "TOK_FN";
-        case TOK_TRUE: return "TOK_TRUE";
-        case TOK_FALSE: return "TOK_FALSE";
-        case TOK_MUT: return "TOK_MUT";
-        default: return "UNKNOWN";
-    }
-}
-
-struct Token {
-    TokenType type;
-    std::string literal;
-    int line;
-
-    Token() : type(TOK_NONE), line(0) {}
-    Token(TokenType type, std::string  literal, int line) : type(type), literal(std::move(literal)), line(line) {}
-
-    friend std::ostream& operator <<(std::ostream& os, const Token& token);
-};
-
-std::ostream& operator <<(std::ostream& os, const Token& token) {
-    os << "{" << tokenTypeToString(token.type) << ", \"" << token.literal << "\", " << token.line << "}";
-    return os;
 }
 
 TokenType getTrivialTokenType(char ch) {
@@ -152,5 +101,59 @@ TokenType getTrivialTokenType(char ch) {
     }
 }
 
+std::string tokenTypeToString(TokenType type) {
+    switch (type) {
+        case TOK_NONE: return "TOK_NONE";
+        case TOK_EOF: return "TOK_EOF";
+        case TOK_IDENTIFIER: return "TOK_IDENTIFIER";
+        case TOK_INTEGER: return "TOK_INTEGER";
+        case TOK_STRING: return "TOK_STRING";
+        case TOK_LPAREN: return "TOK_LPAREN";
+        case TOK_RPAREN: return "TOK_RPAREN";
+        case TOK_LBRACE: return "TOK_LBRACE";
+        case TOK_RBRACE: return "TOK_RBRACE";
+        case TOK_LBRACKET: return "TOK_LBRACKET";
+        case TOK_RBRACKET: return "TOK_RBRACKET";
+        case TOK_COLON: return "TOK_COLON";
+        case TOK_PLUS: return "TOK_PLUS";
+        case TOK_MINUS: return "TOK_MINUS";
+        case TOK_PRODUCT: return "TOK_PRODUCT";
+        case TOK_DIVISION: return "TOK_DIVISION";
+        case TOK_EQUALS: return "TOK_EQUALS";
+        case TOK_ASSIGN: return "TOK_ASSIGN";
+        case TOK_GREATER: return "TOK_GREATER";
+        case TOK_LESS: return "TOK_LESS";
+        case TOK_OUTPUT_TYPE: return "TOK_OUTPUT_TYPE";
+        case TOK_SEMICOLON: return "TOK_SEMICOLON";
+        case TOK_LESS_OR_EQUAL: return "TOK_LESS_OR_EQUAL";
+        case TOK_GREATER_OR_EQUAL: return "TOK_GREATER_OR_EQUAL";
+        case TOK_IF: return "TOK_IF";
+        case TOK_ELSE: return "TOK_ELSE";
+        case TOK_WHILE: return "TOK_WHILE";
+        case TOK_RETURN: return "TOK_RETURN";
+        case TOK_LET: return "TOK_LET";
+        case TOK_FN: return "TOK_FN";
+        case TOK_TRUE: return "TOK_TRUE";
+        case TOK_FALSE: return "TOK_FALSE";
+        case TOK_MUT: return "TOK_MUT";
+        default: return "UNKNOWN";
+    }
+}
+
+struct Token {
+    TokenType type;
+    std::string literal;
+    int line;
+
+    Token() : type(TOK_NONE), line(0) {}
+    Token(TokenType type, std::string  literal, int line) : type(type), literal(std::move(literal)), line(line) {}
+
+    friend std::ostream& operator <<(std::ostream& os, const Token& token);
+};
+
+std::ostream& operator <<(std::ostream& os, const Token& token) {
+    os << "{" << tokenTypeToString(token.type) << ", \"" << token.literal << "\", " << token.line << "}";
+    return os;
+}
 
 #endif //EMMC_TOKEN_H
