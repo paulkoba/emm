@@ -26,8 +26,78 @@ static int getTokenPrecedence(TokenType token) {
         case TOK_ASSIGN:
             return 80;
         default:
-            return 0;
+            return -1;
     }
+}
+
+static std::unique_ptr<ExpressionAST> parseExpression(const std::vector<Token>& tokens, int& idx);
+
+static std::unique_ptr<ExpressionAST> parsePrimary(const std::vector<Token>& tokens, int& idx) {
+    const Token& token = tokens[idx];
+    ++idx;
+    switch(token.type) {
+        case TOK_IDENTIFIER:
+            return std::make_unique<VariableAST>(token.literal, token.type);
+        case TOK_INTEGER:
+            return std::make_unique<I64AST>(std::stoll(token.literal));
+        case TOK_STRING:
+            return std::make_unique<StringAST>(token.literal);
+        case TOK_LPAREN: {
+            auto expr = parseExpression(tokens, idx);
+            if(!expr) return expr;
+
+            if(tokens[idx].type != TOK_RPAREN) {
+                compilationError(token.line, "Expected ')', got: " + token.literal);
+            }
+            ++idx;
+            return expr;
+        }
+        default:
+            compilationError(token.line, "Unexpected token: " + token.literal);
+            return nullptr;
+    }
+}
+
+static std::unique_ptr<ExpressionAST> parseUnary(const std::vector<Token>& tokens, int& idx) {
+    const Token& token = tokens[idx];
+    if(token.type == TOK_MINUS) {
+        ++idx;
+        auto expr = parsePrimary(tokens, idx);
+        if(!expr) return expr;
+        return std::make_unique<UnaryOpAST>(std::move(expr), token.literal);
+    }
+
+    return parsePrimary(tokens, idx);
+}
+
+static std::unique_ptr<ExpressionAST> parseBinaryOp(const std::vector<Token>& tokens, int& idx, std::unique_ptr<ExpressionAST> left, int precedence) {
+    while(true) {
+        auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
+        if(binOpPrecedence < precedence) {
+            return left;
+        }
+
+        const Token& token = tokens[idx];
+        ++idx;
+        auto right = parseUnary(tokens, idx);
+        if(!right) return right;
+
+        auto nextPrecedence = getTokenPrecedence(tokens[idx].type);
+
+        if(binOpPrecedence < nextPrecedence) {
+            right = parseBinaryOp(tokens, idx, std::move(right), binOpPrecedence + 1);
+            if(!right) return right;
+        }
+
+        left = std::make_unique<BinaryExprAST>(std::move(left), std::move(right), token.literal);
+    }
+}
+
+static std::unique_ptr<ExpressionAST> parseExpression(const std::vector<Token>& tokens, int& idx) {
+    auto lhs = parseUnary(tokens, idx);
+    if (!lhs) return nullptr;
+
+    return parseBinaryOp(tokens, idx, std::move(lhs), 0);
 }
 
 static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& tokens, int& idx) {
@@ -101,12 +171,14 @@ static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& toke
 
     ++idx;
 
+    auto body = parseExpression(tokens, idx);
+
     if(tokens[idx].type != TOK_RBRACE) {
         compilationError(tokens[idx].line, "Expected \"}\" , got " + tokens[idx].literal);
         return nullptr;
     }
 
-    return std::make_unique<FunctionAST>(std::move(prototype), nullptr);
+    return std::make_unique<FunctionAST>(std::move(prototype), std::move(body));
 }
 
 static std::vector<std::unique_ptr<ExpressionAST>> parseEverything(const std::vector<Token>& tokens) {

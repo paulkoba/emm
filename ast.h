@@ -31,7 +31,7 @@ public:
     explicit I64AST(int64_t value) : value(value) {}
 
     [[nodiscard]] std::string generateDOTHeader() const override {
-        return std::to_string((int64_t)this) + " [label=\"I64" + std::to_string(value) + "\"]\n";
+        return std::to_string((int64_t)this) + " [label=\"I64 " + std::to_string(value) + "\"]\n";
     }
 };
 
@@ -42,7 +42,17 @@ public:
     VariableAST(std::string name, TokenType type) : name(std::move(name)), type(type) {}
 
     [[nodiscard]] std::string generateDOTHeader() const override {
-        return std::to_string((int64_t)this) + " [label=\"Variable" + name + "\"]\n";
+        return std::to_string((int64_t)this) + " [label=\"Variable " + name + "\"]\n";
+    }
+};
+
+class StringAST : public ExpressionAST {
+    std::string value;
+public:
+    explicit StringAST(std::string value) : value(std::move(value)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        return std::to_string((int64_t)this) + " [label=\"String " + value + "\"]\n";
     }
 };
 
@@ -64,11 +74,34 @@ public:
         std::string output;
         if(lhs) {
             output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)lhs.get()) + "\n";
-            lhs->generateDOT();
+            output += lhs->generateDOT();
         }
         if(rhs) {
             output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)rhs.get()) + "\n";
-            rhs->generateDOT();
+            output += rhs->generateDOT();
+        }
+        return output;
+    }
+};
+
+class UnaryOpAST : public ExpressionAST {
+    std::unique_ptr<ExpressionAST> operand;
+    std::string op;
+
+public:
+    UnaryOpAST(std::unique_ptr<ExpressionAST> operand, std::string op) : operand(std::move(operand)), op(std::move(op)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output;
+        if(operand) output += operand->generateDOTHeader();
+        return output + std::to_string((int64_t)this) + " [label=\"UnaryOpAST" + op + "\"]\n";
+    }
+
+    std::string generateDOT() override {
+        std::string output;
+        if(operand) {
+            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)operand.get()) + "\n";
+            operand->generateDOT();
         }
         return output;
     }
@@ -130,11 +163,11 @@ public:
         std::string output;
         if(proto) {
             output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)proto.get()) + "\n";
-            proto->generateDOT();
+            output += proto->generateDOT();
         }
         if(body) {
             output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)body.get()) + "\n";
-            body->generateDOT();
+            output += body->generateDOT();
         }
         return output;
     }
