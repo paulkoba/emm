@@ -50,6 +50,7 @@ template<typename T, typename S>
 
     return os;
 }
+
 template<typename T>
 [[maybe_unused]] std::ostream& operator <<(std::ostream& os, const std::vector<T>& f) {
     if(f.empty()) {
@@ -63,6 +64,7 @@ template<typename T>
 
     return os;
 }
+
 template<typename T>
 [[maybe_unused]] std::ostream& operator <<(std::ostream& os, const std::priority_queue<T>& f) {
     std::priority_queue<T> cp = f;

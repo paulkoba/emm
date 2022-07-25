@@ -7,6 +7,10 @@ fn factorial(n: i32) -> i32 {
     }
 }
 
+fn funny_fn(a: i64, b: i32) -> i64 {
+    return a + b;
+}
+
 # Comment example #2
 fn main() -> i32 {
     let a: i64 = 123; # Comment example #3

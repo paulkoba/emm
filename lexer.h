@@ -40,6 +40,7 @@ std::vector<Token> lex(const std::string& input) {
 
     while(pos < input.size()) {
         if(state == LEXER_STATE_STRING) {
+            // TODO: escape sequences other than "
             if(input[pos] == '"') {
                 if(!current.literal.empty() && current.literal.back() == '\\') {
                     current.literal.pop_back();
@@ -65,6 +66,7 @@ std::vector<Token> lex(const std::string& input) {
             continue;
         }
 
+        // TODO: Clean this up, internal condition is not obvious and almost certainly wrong
         if(input[pos] == ' ' || input[pos] == '\t') {
             if(state != LEXER_STATE_START) {
                 addPreviousToken();
@@ -96,7 +98,7 @@ std::vector<Token> lex(const std::string& input) {
         if(std::isdigit(input[pos])) {
             if(current.type != TOK_NONE && current.type != TOK_INTEGER && current.type != TOK_IDENTIFIER) {
                 addPreviousToken();
-                state = LEXER_STATE_START;
+                state = LEXER_STATE_START; // i.e. go into the next condition
             }
 
             if(state == LEXER_STATE_START) {
@@ -109,7 +111,7 @@ std::vector<Token> lex(const std::string& input) {
             continue;
         }
 
-        if(std::isalpha(input[pos])) {
+        if(std::isalpha(input[pos]) || input[pos] == '_') {
             if(current.type != TOK_NONE && current.type != TOK_IDENTIFIER) {
                 addPreviousToken();
                 state = LEXER_STATE_START;

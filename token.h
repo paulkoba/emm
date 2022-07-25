@@ -2,6 +2,8 @@
 // Created by fail on 7/25/22.
 //
 
+// TODO: There is a lot of duplication, should think about how to clean this up.
+
 #ifndef EMMC_TOKEN_H
 #define EMMC_TOKEN_H
 
@@ -34,6 +36,7 @@ enum TokenType {
     TOK_SEMICOLON = -21,
     TOK_LESS_OR_EQUAL = -22,
     TOK_GREATER_OR_EQUAL = -23,
+    TOK_COMMA = -24,
 
     // KEYWORDS
     TOK_IF = -100,
@@ -96,6 +99,8 @@ TokenType getTrivialTokenType(char ch) {
             return TOK_RBRACKET;
         case ':':
             return TOK_COLON;
+        case ',':
+            return TOK_COMMA;
         default:
             return TOK_NONE;
     }
@@ -127,6 +132,7 @@ std::string tokenTypeToString(TokenType type) {
         case TOK_SEMICOLON: return "TOK_SEMICOLON";
         case TOK_LESS_OR_EQUAL: return "TOK_LESS_OR_EQUAL";
         case TOK_GREATER_OR_EQUAL: return "TOK_GREATER_OR_EQUAL";
+        case TOK_COMMA: return "TOK_COMMA";
         case TOK_IF: return "TOK_IF";
         case TOK_ELSE: return "TOK_ELSE";
         case TOK_WHILE: return "TOK_WHILE";
@@ -143,7 +149,7 @@ std::string tokenTypeToString(TokenType type) {
 struct Token {
     TokenType type;
     std::string literal;
-    int line;
+    int64_t line;
 
     Token() : type(TOK_NONE), line(0) {}
     Token(TokenType type, std::string  literal, int line) : type(type), literal(std::move(literal)), line(line) {}
