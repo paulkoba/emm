@@ -32,7 +32,35 @@ enum TokenType {
     TOK_LESS = -19,
     TOK_OUTPUT_TYPE = -20,
     TOK_SEMICOLON = -21,
+
+    // KEYWORDS
+    TOK_IF = -22,
+    TOK_ELSE = -23,
+    TOK_WHILE = -24,
+    TOK_RETURN = -25,
+    TOK_LET = -26,
+    TOK_FN = -27,
+    TOK_TRUE = -28,
+    TOK_FALSE = -29,
+    TOK_MUT = -30,
 };
+
+// TODO: Get rid of static variable
+TokenType tryMatchKeyword(const std::string& input) {
+    static std::unordered_map<std::string, TokenType> keywords = {
+            {"if", TOK_IF},
+            {"else", TOK_ELSE},
+            {"while", TOK_WHILE},
+            {"return", TOK_RETURN},
+            {"let", TOK_LET},
+            {"fn", TOK_FN},
+            {"true", TOK_TRUE},
+            {"false", TOK_FALSE},
+            {"mut", TOK_MUT},
+    };
+
+    return keywords.count(input) ? keywords[input] : TOK_NONE;
+}
 
 std::string tokenTypeToString(TokenType type) {
     switch (type) {
@@ -58,6 +86,16 @@ std::string tokenTypeToString(TokenType type) {
         case TOK_LESS: return "TOK_LESS";
         case TOK_OUTPUT_TYPE: return "TOK_OUTPUT_TYPE";
         case TOK_SEMICOLON: return "TOK_SEMICOLON";
+        case TOK_IF: return "TOK_IF";
+        case TOK_ELSE: return "TOK_ELSE";
+        case TOK_WHILE: return "TOK_WHILE";
+        case TOK_RETURN: return "TOK_RETURN";
+        case TOK_LET: return "TOK_LET";
+        case TOK_FN: return "TOK_FN";
+        case TOK_TRUE: return "TOK_TRUE";
+        case TOK_FALSE: return "TOK_FALSE";
+        case TOK_MUT: return "TOK_MUT";
+        default: return "UNKNOWN";
     }
 }
 
@@ -88,7 +126,7 @@ TokenType getTrivialTokenType(char ch) {
         case '/':
             return TOK_DIVISION;
         case '=':
-            return TOK_EQUAL;
+            return TOK_ASSIGN;
         case '>':
             return TOK_GREATER;
         case '<':

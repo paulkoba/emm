@@ -23,6 +23,13 @@ std::vector<Token> lex(const std::string& input) {
     Token current;
 
     auto addPreviousToken = [&]() {
+        if(current.type == TOK_IDENTIFIER) {
+            TokenType r = tryMatchKeyword(current.literal);
+            if(r != TOK_NONE) {
+                current.type = r;
+            }
+        }
+
         if(current.type != TOK_NONE && current.type != TOK_STRING) {
             tokens.push_back(current);
         }
@@ -98,7 +105,8 @@ std::vector<Token> lex(const std::string& input) {
 
         TokenType tt = getTrivialTokenType(input[pos]);
 
-        if(tt != TOK_NONE && tt != TOK_GREATER) {
+        // = and - need special treatment, as they may be part of more complex lexemes.
+        if(tt != TOK_NONE && tt != TOK_GREATER && tt != TOK_ASSIGN) {
             addPreviousToken();
             current.type = tt;
             current.literal = input[pos];
@@ -112,6 +120,17 @@ std::vector<Token> lex(const std::string& input) {
             } else {
                 addPreviousToken();
                 current = {TOK_GREATER, ">", line};
+            }
+            pos++;
+            continue;
+        }
+
+        if(tt == TOK_ASSIGN) {
+            if(current.type == TOK_ASSIGN) {
+                current = {TOK_EQUAL, "==", line};
+            } else {
+                addPreviousToken();
+                current = {TOK_ASSIGN, "=", line};
             }
             pos++;
             continue;

@@ -17,5 +17,8 @@ fn main() -> i32 {
     let mut d = 42;
     d = factorial(d + 1) - c;
 
+    let num3erw1thme55edupn4m3 = d;
+    let n1: i32;
+
     return d;
 }
