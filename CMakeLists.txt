@@ -3,4 +3,4 @@ project(emmc)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(emmc main.cpp)
+add_executable(emmc main.cpp token.h lexer.h cpp_helpers.h)
