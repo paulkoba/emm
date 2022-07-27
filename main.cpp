@@ -7,7 +7,7 @@
 #include "parser.h"
 
 int main() {
-    std::ifstream input("../examples/trivial_example.emm");
+    std::ifstream input("../examples/example.emm");
     std::stringstream buffer;
     buffer << input.rdbuf();
     auto tmp = lex(buffer.str());

@@ -1,38 +1,39 @@
 fn factorial(n: i32) -> i32 {
     if (n == 0) {
-        return 1;
+        return 1
     } else {
         # Comment example #1
-        return n * factorial(n - 1);
+        return n * factorial(n - 1)
     }
 }
 
 fn funny_fn(a: i64, b: i32) -> i64 {
-    return a + b;
+    return a + b
 }
 
 # Comment example #2
 fn main() -> i32 {
-    let a: i64 = 123; # Comment example #3
-    let b: i64 = 456;
+    terrible_fn((i + 8) / 2, 2 * (2 + 2))
+    let a: i64 = 123 # Comment example #3
+    let b: i64 = 456
 
-    let c = a + b;
+    let c = a + b
 
-    let mut d = 42;
-    d = factorial(d + 1) - c;
+    let d = 42
+    d = factorial(d + 1) - c
 
-    let num3erw1thme55edupn4m3 = d;
-    let n1: i32;
+    let num3erw1thme55edupn4m3 = d
+    let n1: i32
 
     if (d >= 5) {
-        d = 2;
+        d = 2
     }
 
-    let e = "Hello, world!";
-    let f = "Hello, \"world\"!";
-    let g: String = e;
+    let e = "Hello, world!"
+    let f = "Hello, \"world\"!"
+    let g: String = e
 
-    println("Hello, world!");
+    println("Hello, world!")
 
-    return d;
+    return d
 }

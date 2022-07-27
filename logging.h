@@ -6,6 +6,7 @@
 #define EMMC_LOGGING_H
 
 #include <iostream>
+#include <stacktrace>
 
 // TODO: This doesn't work
 
