@@ -69,6 +69,8 @@ llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, const std::str
             return builder.CreateMul(lhs, rhs);
         case TOK_DIVISION:
             return builder.CreateSDiv(lhs, rhs);
+        case TOK_EQUALS:
+            return builder.CreateICmpEQ(lhs, rhs);
         default:
             compilationError("Not yet implemented.");
             return nullptr;

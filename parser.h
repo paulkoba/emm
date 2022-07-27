@@ -204,32 +204,35 @@ static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens, in
 
     ++idx;
 
+    bool shouldPush = true;
+
     while(tokens[idx].type != TOK_RBRACE) {
         if(tokens[idx].type == TOK_IF) {
             auto ifExpr = parseCondition(tokens, idx);
             if(!ifExpr) return nullptr;
-            expressions.push_back(std::move(ifExpr));
+            if(shouldPush) expressions.push_back(std::move(ifExpr));
         } else if(tokens[idx].type == TOK_RETURN) {
             idx++;
             auto returnResult = parseReturn(tokens, idx);
             if(!returnResult) {
                 continue;
             }
-            expressions.push_back(std::move(returnResult));
+            if(shouldPush) expressions.push_back(std::move(returnResult));
+            shouldPush = false;
         } else if(tokens[idx].type == TOK_LET) {
             idx++;
             auto letResult = parseLet(tokens, idx);
             if(!letResult) {
                 continue;
             }
-            expressions.push_back(std::move(letResult));
+            if(shouldPush) expressions.push_back(std::move(letResult));
         } else{
             auto expr = parseExpression(tokens, idx);
             if(!expr) {
                 compilationError(tokens[idx].line, "Expected \"}\" or expression, got " + tokens[idx].literal);
                 return nullptr;
             }
-            expressions.push_back(std::move(expr));
+            if(shouldPush) expressions.push_back(std::move(expr));
         }
     }
 

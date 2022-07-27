@@ -18,10 +18,23 @@
 #include <llvm/IR/Value.h>
 #include <llvm/IR/Constants.h>
 
+class Variable {
+public:
+    std::string name;
+    std::string type;
+    llvm::Value* value = nullptr;
+
+public:
+    Variable(std::string name, std::string type, llvm::Value* value) : name(std::move(name)), type(std::move(type)) , value(value){}
+    Variable() = default;
+};
+
 // TODO: Proper modules
 std::unique_ptr<llvm::Module> module = nullptr;
 
 class ExpressionAST {
+public:
+    ExpressionAST* parent = nullptr;
 public:
     virtual ~ExpressionAST() = default;
 
@@ -35,6 +48,30 @@ public:
 
     virtual llvm::Value* codegen(llvm::IRBuilder<>& builder) {
         return nullptr;
+    }
+
+    virtual void populateParents() {
+        // Do nothing
+    }
+
+    //NOLINTNEXTLINE(misc-no-recursion)
+    virtual void createVariableInNearestScope(const std::string& name, const std::string& type, llvm::Value* value) {
+        if(parent) {
+            parent->createVariableInNearestScope(name, type, value);
+        }
+    }
+
+    //NOLINTNEXTLINE(misc-no-recursion)
+    virtual Variable* getVariableFromNearestScope(const std::string& name) {
+        if(parent) {
+            return parent->getVariableFromNearestScope(name);
+        }
+
+        return nullptr;
+    }
+
+    virtual bool finalInScope() {
+        return false;
     }
 };
 
@@ -60,6 +97,16 @@ public:
 
     [[nodiscard]] std::string generateDOTHeader() const override {
         return std::to_string((int64_t) this) + " [label=\"Variable " + name + ":" + type + "\"]\n";
+    }
+
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override {
+        auto var = getVariableFromNearestScope(name);
+
+        if(var) {
+            return var->value;
+        }
+
+        return nullptr;
     }
 };
 
@@ -109,6 +156,17 @@ public:
         auto r = buildBuiltinIntegerBinOp(builder, "i64", "i64", lhsValue, rhsValue, op);
         return r;
     }
+
+    void populateParents() override {
+        if (lhs) {
+            lhs->parent = this;
+            lhs->populateParents();
+        }
+        if (rhs) {
+            rhs->parent = this;
+            rhs->populateParents();
+        }
+    }
 };
 
 class UnaryOpAST : public ExpressionAST {
@@ -132,6 +190,13 @@ public:
             operand->generateDOT();
         }
         return output;
+    }
+
+    void populateParents() override {
+        if (operand) {
+            operand->parent = this;
+            operand->populateParents();
+        }
     }
 };
 
@@ -158,6 +223,27 @@ public:
             output += arg->generateDOT();
         }
         return output;
+    }
+
+    void populateParents() override {
+        for (const auto& arg : args) {
+            arg->parent = this;
+            arg->populateParents();
+        }
+    }
+
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override {
+        auto func = module->getFunction(name);
+        if (!func) {
+            std::cerr << "Error: Function " << name << " not found" << std::endl;
+            return nullptr;
+        }
+
+        std::vector<llvm::Value*> oArgs;
+        for (const auto& arg : args) {
+            oArgs.push_back(arg->codegen(builder));
+        }
+        return builder.CreateCall(func, oArgs);
     }
 };
 
@@ -206,7 +292,10 @@ public:
 
 class ScopeAST : public ExpressionAST {
     std::vector<std::unique_ptr<ExpressionAST>> statements;
+    std::map<std::string, Variable> variables;
 
+    friend class FunctionAST;
+    friend class IfAST;
 public:
     explicit ScopeAST(std::vector<std::unique_ptr<ExpressionAST>> statements) : statements(std::move(statements)) {}
 
@@ -233,6 +322,27 @@ public:
             lastValue = statement->codegen(builder);
         }
         return lastValue;
+    }
+
+    void populateParents() override {
+        for (const auto &statement: statements) {
+            statement->parent = this;
+            statement->populateParents();
+        }
+    }
+
+    void createVariableInNearestScope(const std::string& name, const std::string& type, llvm::Value* value) override {
+        variables[name] = Variable(name, type, value);
+    }
+
+    Variable* getVariableFromNearestScope(const std::string& name) override {
+        if(variables.find(name) != variables.end()) return &variables[name];
+
+        if(parent) {
+            return parent->getVariableFromNearestScope(name);
+        }
+
+        return nullptr;
     }
 };
 
@@ -281,9 +391,8 @@ public:
         llvm::BasicBlock* entryBlock = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
         builder.SetInsertPoint(entryBlock);
 
-        for (auto *arg = function->arg_begin(); arg != function->arg_end(); ++arg) {
-            auto *argValue = builder.CreateAlloca(arg->getType());
-            builder.CreateStore(arg, argValue);
+        for (auto& arg : function->args()) {
+            body->createVariableInNearestScope((std::string)arg.getName(), "i64", &arg);
         }
 
         if (body) {
@@ -291,6 +400,17 @@ public:
         }
 
         return nullptr;
+    }
+
+    void populateParents() override {
+        if (proto) {
+            proto->parent = this;
+            proto->populateParents();
+        }
+        if (body) {
+            body->parent = this;
+            body->populateParents();
+        }
     }
 };
 
@@ -329,6 +449,57 @@ public:
         }
         return output;
     }
+
+    void populateParents() override {
+        if (condition) {
+            condition->parent = this;
+            condition->populateParents();
+        }
+        if (trueBranch) {
+            trueBranch->parent = this;
+            trueBranch->populateParents();
+        }
+        if (falseBranch) {
+            falseBranch->parent = this;
+            falseBranch->populateParents();
+        }
+    }
+
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override {
+        llvm::Value* conditionValue = condition->codegen(builder);
+        if(!conditionValue) {
+            return nullptr;
+        }
+
+        bool trueBranchReturn = !trueBranch->statements.empty() && trueBranch->statements.back()->finalInScope();
+        bool falseBranchReturn = !falseBranch->statements.empty() && falseBranch->statements.back()->finalInScope();
+
+        llvm::Value* conditionBool = builder.CreateICmpNE(conditionValue, llvm::ConstantInt::get(conditionValue->getType(), 0));
+        llvm::Function* function = builder.GetInsertBlock()->getParent();
+        llvm::BasicBlock* trueBlock = llvm::BasicBlock::Create(builder.getContext(), "true", function);
+        llvm::BasicBlock* falseBlock = llvm::BasicBlock::Create(builder.getContext(), "false");
+        llvm::BasicBlock* exitBlock = nullptr;
+        if(!falseBranchReturn || !trueBranchReturn) exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
+        builder.CreateCondBr(conditionBool, trueBlock, falseBlock);
+        builder.SetInsertPoint(trueBlock);
+        if (trueBranch) {
+            trueBranch->codegen(builder);
+        }
+        if(!trueBranchReturn) builder.CreateBr(exitBlock);
+        function->getBasicBlockList().push_back(falseBlock);
+        builder.SetInsertPoint(falseBlock);
+        if (falseBranch) {
+            falseBranch->codegen(builder);
+        }
+        if(!falseBranchReturn) builder.CreateBr(exitBlock);
+
+        if(exitBlock) {
+            function->getBasicBlockList().push_back(exitBlock);
+            builder.SetInsertPoint(exitBlock);
+        }
+
+        return nullptr;
+    }
 };
 
 class ReturnAST : public ExpressionAST {
@@ -359,6 +530,17 @@ public:
             return val;
         }
         return nullptr;
+    }
+
+    void populateParents() override {
+        if (value) {
+            value->parent = this;
+            value->populateParents();
+        }
+    }
+
+    bool finalInScope() override {
+        return true;
     }
 };
 

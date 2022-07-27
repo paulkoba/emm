@@ -28,6 +28,7 @@ struct std::hash<std::pair<T, S>> {
         return std::hash<T>{}(elem.first) ^ std::hash<S>{}(elem.second);
     }
 };
+
 template<typename T>
 struct std::hash<std::vector<T>> {
     std::size_t operator()(const std::vector<T>& elem) const noexcept {

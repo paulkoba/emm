@@ -1,19 +1,24 @@
 cmake_minimum_required(VERSION 3.22)
 project(emmc)
 
-find_package(LLVM REQUIRED CONFIG)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
 
-include_directories(${LLVM_INCLUDE_DIRS})
-separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-add_definitions(${LLVM_DEFINITIONS_LIST})
+link_libraries()
+execute_process(COMMAND llvm-config --libs OUTPUT_VARIABLE LIBS)
+execute_process(COMMAND llvm-config --system-libs OUTPUT_VARIABLE SYS_LIBS)
+execute_process(COMMAND llvm-config --ldflags OUTPUT_VARIABLE LDF)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_C_FLAGS "-Wall")
+string(STRIP ${LIBS} LIBS)
+string(STRIP ${SYS_LIBS} SYS_LIBS)
+string(STRIP ${LDF} LDF)
 
-add_executable(emmc main.cpp token.h lexer.h cpp_helpers.h ast.h parser.h logging.h types.h)
+link_libraries(${LIBS} ${SYS_LIBS} ${LDF})
 
-llvm_map_components_to_libnames(llvm_libs support core irreader)
-target_link_libraries(emmc ${llvm_libs})
+execute_process(COMMAND llvm-config --cxxflags OUTPUT_VARIABLE CMAKE_CXX_FLAGS)
+string(STRIP ${CMAKE_CXX_FLAGS} CMAKE_CXX_FLAGS)
+
+add_executable(emmc main.cpp token.h lexer.h cpp_helpers.h ast.h parser.h logging.h types.h optimization_passes.h compilation.h compilation.h)
