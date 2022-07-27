@@ -13,7 +13,7 @@ add_definitions(${LLVM_DEFINITIONS_LIST})
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_C_FLAGS "-Wall")
 
-add_executable(emmc main.cpp token.h lexer.h cpp_helpers.h ast.h parser.h logging.h)
+add_executable(emmc main.cpp token.h lexer.h cpp_helpers.h ast.h parser.h logging.h types.h)
 
 llvm_map_components_to_libnames(llvm_libs support core irreader)
 target_link_libraries(emmc ${llvm_libs})

@@ -12,6 +12,14 @@
 #include <vector>
 
 #include "token.h"
+#include "types.h"
+
+#include <llvm/IR/LLVMContext.h>
+#include <llvm/IR/Value.h>
+#include <llvm/IR/Constants.h>
+
+// TODO: Proper modules
+std::unique_ptr<llvm::Module> module = nullptr;
 
 class ExpressionAST {
 public:
@@ -24,6 +32,10 @@ public:
     virtual std::string generateDOT() {
         return "";
     }
+
+    virtual llvm::Value* codegen(llvm::IRBuilder<>& builder) {
+        return nullptr;
+    }
 };
 
 class I64AST : public ExpressionAST {
@@ -33,6 +45,10 @@ public:
 
     [[nodiscard]] std::string generateDOTHeader() const override {
         return std::to_string((int64_t) this) + " [label=\"I64 " + std::to_string(value) + "\"]\n";
+    }
+
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override {
+        return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value, true));
     }
 };
 
@@ -59,16 +75,16 @@ public:
 
 class BinaryExprAST : public ExpressionAST {
     std::unique_ptr<ExpressionAST> lhs, rhs;
-    std::string op;
+    TokenType op;
 public:
-    BinaryExprAST(std::unique_ptr<ExpressionAST> lhs, std::unique_ptr<ExpressionAST> rhs, std::string op) : lhs(
-            std::move(lhs)), rhs(std::move(rhs)), op(std::move(op)) {}
+    BinaryExprAST(std::unique_ptr<ExpressionAST> lhs, std::unique_ptr<ExpressionAST> rhs, TokenType op) : lhs(
+            std::move(lhs)), rhs(std::move(rhs)), op(op) {}
 
     [[nodiscard]] std::string generateDOTHeader() const override {
         std::string output;
         if (lhs) output += lhs->generateDOTHeader();
         if (rhs) output += rhs->generateDOTHeader();
-        return output + std::to_string((int64_t) this) + " [label=\"BinaryExprAST" + op + "\"]\n";
+        return output + std::to_string((int64_t) this) + " [label=\"BinaryExprAST" + tokenTypeToString(op) + "\"]\n";
     }
 
     std::string generateDOT() override {
@@ -82,6 +98,16 @@ public:
             output += rhs->generateDOT();
         }
         return output;
+    }
+
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override {
+        auto lhsValue = lhs->codegen(builder);
+        auto rhsValue = rhs->codegen(builder);
+        if (!lhsValue || !rhsValue) return nullptr;
+
+        // TODO: Properly handle different types
+        auto r = buildBuiltinIntegerBinOp(builder, "i64", "i64", lhsValue, rhsValue, op);
+        return r;
     }
 };
 
@@ -139,7 +165,7 @@ class PrototypeAST : public ExpressionAST {
     std::string name;
     std::string returnType;
     std::vector<std::pair<std::string, std::string>> args; // Name:Type Pairs
-
+    friend class FunctionAST;
 public:
     PrototypeAST(std::string name, std::string returnType, std::vector<std::pair<std::string, std::string>> args)
             : name(std::move(name)), returnType(std::move(returnType)),
@@ -155,6 +181,26 @@ public:
         output += "\"]\n";
 
         return output;
+    }
+
+    llvm::Function* codegen(llvm::IRBuilder<>& builder) override {
+        std::vector<llvm::Type*> argTypes;
+        // TODO: Proper types instead of always using 64 bit integers
+        for (const auto& arg : args) {
+            argTypes.push_back(llvm::Type::getInt64Ty(builder.getContext()));
+        }
+
+        llvm::FunctionType* functionType = llvm::FunctionType::get(llvm::Type::getInt64Ty(builder.getContext()), argTypes, false);
+        llvm::Function* function = llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, name,
+                                                          module.get());
+
+        std::size_t i = 0;
+        for (auto& arg : function->args()) {
+            arg.setName(args[i].first);
+            i++;
+        }
+
+        return function;
     }
 };
 
@@ -179,6 +225,14 @@ public:
             output += statement->generateDOT();
         }
         return output;
+    }
+
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override {
+        llvm::Value* lastValue = nullptr;
+        for (const auto &statement: statements) {
+            lastValue = statement->codegen(builder);
+        }
+        return lastValue;
     }
 };
 
@@ -209,6 +263,34 @@ public:
             output += body->generateDOT();
         }
         return output;
+    }
+
+    llvm::Function* codegen(llvm::IRBuilder<>& builder) override {
+        llvm::Function* function = module->getFunction(proto->name);
+        if(!function) {
+            function = proto->codegen(builder);
+        }
+        if(!function) {
+            return nullptr;
+        }
+        if(!function->empty()) {
+            compilationError("Function already defined");
+            return nullptr;
+        }
+
+        llvm::BasicBlock* entryBlock = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
+        builder.SetInsertPoint(entryBlock);
+
+        for (auto *arg = function->arg_begin(); arg != function->arg_end(); ++arg) {
+            auto *argValue = builder.CreateAlloca(arg->getType());
+            builder.CreateStore(arg, argValue);
+        }
+
+        if (body) {
+            body->codegen(builder);
+        }
+
+        return nullptr;
     }
 };
 
@@ -268,6 +350,15 @@ public:
             output += value->generateDOT();
         }
         return output;
+    }
+
+    llvm::Value* codegen(llvm::IRBuilder<>& builder) override {
+        if (value) {
+            llvm::Value* val = value->codegen(builder);
+            builder.CreateRet(val);
+            return val;
+        }
+        return nullptr;
     }
 };
 

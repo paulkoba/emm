@@ -120,7 +120,7 @@ static std::unique_ptr<ExpressionAST> parseBinaryOp(const std::vector<Token>& to
             if(!right) return right;
         }
 
-        left = std::make_unique<BinaryExprAST>(std::move(left), std::move(right), token.literal);
+        left = std::make_unique<BinaryExprAST>(std::move(left), std::move(right), token.type);
     }
 }
 

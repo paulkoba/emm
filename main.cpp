@@ -7,7 +7,7 @@
 #include "parser.h"
 
 int main() {
-    std::ifstream input("../examples/example.emm");
+    std::ifstream input("../examples/codegen.emm");
     std::stringstream buffer;
     buffer << input.rdbuf();
     auto tmp = lex(buffer.str());
@@ -24,5 +24,15 @@ int main() {
     }
     outputAST << "} \n";
 
+    auto llvmContext = std::make_unique<llvm::LLVMContext>();
+    module = std::make_unique<llvm::Module>("some_module", *llvmContext);
+    llvm::IRBuilder<> builder(*llvmContext);
+
+    for(const auto& e : r) {
+        e->codegen(builder);
+    }
+
+    module->print(llvm::errs(), nullptr);
+    std::cout << "Done" << std::endl;
     return 0;
 }
