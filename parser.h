@@ -30,12 +30,12 @@ static int getTokenPrecedence(TokenType token) {
 	}
 }
 
-static std::unique_ptr<ExpressionAST> parseExpression(
+static std::unique_ptr<BaseASTNode> parseExpression(
 	const std::vector<Token>& tokens, int& idx);
 
-static std::vector<std::unique_ptr<ExpressionAST>> parseArgList(
+static std::vector<std::unique_ptr<BaseASTNode>> parseArgList(
 	const std::vector<Token>& tokens, int& idx) {
-	std::vector<std::unique_ptr<ExpressionAST>> args;
+	std::vector<std::unique_ptr<BaseASTNode>> args;
 	if (idx < tokens.size() && tokens[idx].type == TOK_RPAREN) {
 		idx++;
 		return args;
@@ -60,7 +60,7 @@ static std::vector<std::unique_ptr<ExpressionAST>> parseArgList(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<ExpressionAST> parsePrimary(
+static std::unique_ptr<BaseASTNode> parsePrimary(
 	const std::vector<Token>& tokens, int& idx) {
 	const Token& token = tokens[idx];
 	++idx;
@@ -93,7 +93,7 @@ static std::unique_ptr<ExpressionAST> parsePrimary(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<ExpressionAST> parseUnary(
+static std::unique_ptr<BaseASTNode> parseUnary(
 	const std::vector<Token>& tokens, int& idx) {
 	const Token& token = tokens[idx];
 	if (token.type == TOK_MINUS) {
@@ -107,9 +107,9 @@ static std::unique_ptr<ExpressionAST> parseUnary(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<ExpressionAST> parseBinaryOp(
-	const std::vector<Token>& tokens, int& idx,
-	std::unique_ptr<ExpressionAST> left, int precedence) {
+static std::unique_ptr<BaseASTNode> parseBinaryOp(
+        const std::vector<Token>& tokens, int& idx,
+        std::unique_ptr<BaseASTNode> left, int precedence) {
 	while (true) {
 		auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
 		if (binOpPrecedence < precedence) {
@@ -135,7 +135,7 @@ static std::unique_ptr<ExpressionAST> parseBinaryOp(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<ExpressionAST> parseExpression(
+static std::unique_ptr<BaseASTNode> parseExpression(
 	const std::vector<Token>& tokens, int& idx) {
 	auto lhs = parseUnary(tokens, idx);
 	if (!lhs) return nullptr;
@@ -216,7 +216,7 @@ static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens,
 // NOLINTNEXTLINE(misc-no-recursion)
 static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens,
 											int& idx) {
-	std::vector<std::unique_ptr<ExpressionAST>> expressions;
+	std::vector<std::unique_ptr<BaseASTNode>> expressions;
 
 	if (tokens[idx].type != TOK_LBRACE) {
 		compilationError(tokens[idx].line,
@@ -289,7 +289,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
 		++idx;
 	}
 
-	std::unique_ptr<ExpressionAST> condition = parseExpression(tokens, idx);
+	std::unique_ptr<BaseASTNode> condition = parseExpression(tokens, idx);
 	if (bracketedCondition) {
 		if (tokens[idx].type != TOK_RPAREN) {
 			compilationError(tokens[idx].line,
@@ -313,7 +313,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
 			return nullptr;
 		}
 		// TODO: This doesn't work for some reason with initializer-list ?
-		std::vector<std::unique_ptr<ExpressionAST>> scope;
+		std::vector<std::unique_ptr<BaseASTNode>> scope;
 		scope.push_back(std::move(expr));
 		trueBranchScope = std::make_unique<ScopeAST>(std::move(scope));
 	}
@@ -332,7 +332,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
 				return nullptr;
 			}
 			// TODO: This doesn't work for some reason with initializer-list ?
-			std::vector<std::unique_ptr<ExpressionAST>> scope;
+			std::vector<std::unique_ptr<BaseASTNode>> scope;
 			scope.push_back(std::move(expr));
 			falseBranchScope = std::make_unique<ScopeAST>(std::move(scope));
 		}
@@ -345,7 +345,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
 
 static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens,
 											  int& idx) {
-	std::unique_ptr<ExpressionAST> expression = parseExpression(tokens, idx);
+	std::unique_ptr<BaseASTNode> expression = parseExpression(tokens, idx);
 
 	if (!expression) {
 		compilationError(tokens[idx].line, "Couldn't parse return statement");
@@ -385,7 +385,7 @@ static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens,
 	}
 
 	bool initializerSpecified = tokens[idx].type == TOK_ASSIGN;
-	std::unique_ptr<ExpressionAST> initializer;
+	std::unique_ptr<BaseASTNode> initializer;
 
 	if (initializerSpecified) {
 		++idx;
@@ -397,7 +397,7 @@ static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens,
 
 static std::unique_ptr<ModuleAST> parseEverything(
 	const std::vector<Token>& tokens, std::unique_ptr<llvm::Module> module) {
-	std::vector<std::unique_ptr<ExpressionAST>> result;
+	std::vector<std::unique_ptr<BaseASTNode>> result;
 	int idx = 0;
 	while (idx < tokens.size()) {
 		if (tokens[idx].type == TOK_FN) {

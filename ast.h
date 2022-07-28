@@ -31,15 +31,15 @@ class Variable {
 	Variable() = default;
 };
 
-class ExpressionAST {
+class BaseASTNode {
    public:
-	ExpressionAST *parent = nullptr;
+	BaseASTNode *parent = nullptr;
 
    public:
-	virtual ~ExpressionAST() = default;
+	virtual ~BaseASTNode() = default;
 
 	[[nodiscard]] virtual std::string generateDOTHeader() const {
-		return std::to_string((int64_t)this) + " [label=\"ExpressionAST\"]\n";
+		return std::to_string((int64_t)this) + " [label=\"BaseASTNode\"]\n";
 	}
 
 	virtual std::string generateDOT() { return ""; }
@@ -80,7 +80,7 @@ class ExpressionAST {
 	}
 };
 
-class I64AST : public ExpressionAST {
+class I64AST : public BaseASTNode {
 	int64_t value;
 
    public:
@@ -97,7 +97,7 @@ class I64AST : public ExpressionAST {
 	}
 };
 
-class VariableAST : public ExpressionAST {
+class VariableAST : public BaseASTNode {
 	std::string name;
 	std::string type;
 
@@ -121,7 +121,7 @@ class VariableAST : public ExpressionAST {
 	}
 };
 
-class StringAST : public ExpressionAST {
+class StringAST : public BaseASTNode {
 	std::string value;
 
    public:
@@ -132,13 +132,13 @@ class StringAST : public ExpressionAST {
 	}
 };
 
-class BinaryExprAST : public ExpressionAST {
-	std::unique_ptr<ExpressionAST> lhs, rhs;
+class BinaryExprAST : public BaseASTNode {
+	std::unique_ptr<BaseASTNode> lhs, rhs;
 	TokenType op;
 
    public:
-	BinaryExprAST(std::unique_ptr<ExpressionAST> lhs,
-				  std::unique_ptr<ExpressionAST> rhs, TokenType op)
+	BinaryExprAST(std::unique_ptr<BaseASTNode> lhs,
+                  std::unique_ptr<BaseASTNode> rhs, TokenType op)
 		: lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -187,12 +187,12 @@ class BinaryExprAST : public ExpressionAST {
 	}
 };
 
-class UnaryOpAST : public ExpressionAST {
-	std::unique_ptr<ExpressionAST> operand;
+class UnaryOpAST : public BaseASTNode {
+	std::unique_ptr<BaseASTNode> operand;
 	std::string op;
 
    public:
-	UnaryOpAST(std::unique_ptr<ExpressionAST> operand, std::string op)
+	UnaryOpAST(std::unique_ptr<BaseASTNode> operand, std::string op)
 		: operand(std::move(operand)), op(std::move(op)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -220,13 +220,13 @@ class UnaryOpAST : public ExpressionAST {
 	}
 };
 
-class CallExprAST : public ExpressionAST {
+class CallExprAST : public BaseASTNode {
 	std::string name;
-	std::vector<std::unique_ptr<ExpressionAST>> args;
+	std::vector<std::unique_ptr<BaseASTNode>> args;
 
    public:
 	CallExprAST(std::string name,
-				std::vector<std::unique_ptr<ExpressionAST>> args)
+				std::vector<std::unique_ptr<BaseASTNode>> args)
 		: name(std::move(name)), args(std::move(args)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -271,7 +271,7 @@ class CallExprAST : public ExpressionAST {
 	}
 };
 
-class PrototypeAST : public ExpressionAST {
+class PrototypeAST : public BaseASTNode {
 	std::string name;
 	std::string returnType;
 	std::vector<std::pair<std::string, std::string>> args;	// Name:Type Pairs
@@ -319,8 +319,8 @@ class PrototypeAST : public ExpressionAST {
 	}
 };
 
-class ScopeAST : public ExpressionAST {
-	std::vector<std::unique_ptr<ExpressionAST>> statements;
+class ScopeAST : public BaseASTNode {
+	std::vector<std::unique_ptr<BaseASTNode>> statements;
 	std::map<std::string, Variable> variables;
 
 	friend class FunctionAST;
@@ -328,7 +328,7 @@ class ScopeAST : public ExpressionAST {
 	friend class IfAST;
 
    public:
-	explicit ScopeAST(std::vector<std::unique_ptr<ExpressionAST>> statements)
+	explicit ScopeAST(std::vector<std::unique_ptr<BaseASTNode>> statements)
 		: statements(std::move(statements)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -382,7 +382,7 @@ class ScopeAST : public ExpressionAST {
 	}
 };
 
-class FunctionAST : public ExpressionAST {
+class FunctionAST : public BaseASTNode {
 	std::unique_ptr<PrototypeAST> proto;
 	std::unique_ptr<ScopeAST> body;
 
@@ -456,13 +456,13 @@ class FunctionAST : public ExpressionAST {
 	}
 };
 
-class IfAST : public ExpressionAST {
-	std::unique_ptr<ExpressionAST> condition;
+class IfAST : public BaseASTNode {
+	std::unique_ptr<BaseASTNode> condition;
 	std::unique_ptr<ScopeAST> trueBranch;
 	std::unique_ptr<ScopeAST> falseBranch;
 
    public:
-	IfAST(std::unique_ptr<ExpressionAST> condition,
+	IfAST(std::unique_ptr<BaseASTNode> condition,
 		  std::unique_ptr<ScopeAST> trueBranch,
 		  std::unique_ptr<ScopeAST> falseBranch)
 		: condition(std::move(condition)),
@@ -558,11 +558,11 @@ class IfAST : public ExpressionAST {
 	}
 };
 
-class ReturnAST : public ExpressionAST {
-	std::unique_ptr<ExpressionAST> value;
+class ReturnAST : public BaseASTNode {
+	std::unique_ptr<BaseASTNode> value;
 
    public:
-	explicit ReturnAST(std::unique_ptr<ExpressionAST> value)
+	explicit ReturnAST(std::unique_ptr<BaseASTNode> value)
 		: value(std::move(value)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -601,14 +601,14 @@ class ReturnAST : public ExpressionAST {
 	bool finalInScope() override { return true; }
 };
 
-class LetAST : public ExpressionAST {
+class LetAST : public BaseASTNode {
 	std::string name;
 	std::string type;
-	std::unique_ptr<ExpressionAST> value;
+	std::unique_ptr<BaseASTNode> value;
 
    public:
 	LetAST(std::string name, std::string type,
-		   std::unique_ptr<ExpressionAST> value)
+		   std::unique_ptr<BaseASTNode> value)
 		: name(std::move(name)),
 		  type(std::move(type)),
 		  value(std::move(value)) {}
@@ -631,12 +631,12 @@ class LetAST : public ExpressionAST {
 	}
 };
 
-class ModuleAST : public ExpressionAST {
-	std::vector<std::unique_ptr<ExpressionAST>> expressions;
+class ModuleAST : public BaseASTNode {
+	std::vector<std::unique_ptr<BaseASTNode>> expressions;
 	std::unique_ptr<llvm::Module> module = nullptr;
 
    public:
-	explicit ModuleAST(std::vector<std::unique_ptr<ExpressionAST>> expressions,
+	explicit ModuleAST(std::vector<std::unique_ptr<BaseASTNode>> expressions,
 					   std::unique_ptr<llvm::Module> module)
 		: expressions(std::move(expressions)), module(std::move(module)) {}
 
