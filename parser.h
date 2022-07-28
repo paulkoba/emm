@@ -30,11 +30,9 @@ static int getTokenPrecedence(TokenType token) {
 	}
 }
 
-static std::unique_ptr<BaseASTNode> parseExpression(
-	const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx);
 
-static std::vector<std::unique_ptr<BaseASTNode>> parseArgList(
-	const std::vector<Token>& tokens, int& idx) {
+static std::vector<std::unique_ptr<BaseASTNode>> parseArgList(const std::vector<Token>& tokens, int& idx) {
 	std::vector<std::unique_ptr<BaseASTNode>> args;
 	if (idx < tokens.size() && tokens[idx].type == TOK_RPAREN) {
 		idx++;
@@ -60,15 +58,13 @@ static std::vector<std::unique_ptr<BaseASTNode>> parseArgList(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<BaseASTNode> parsePrimary(
-	const std::vector<Token>& tokens, int& idx) {
+static std::unique_ptr<BaseASTNode> parsePrimary(const std::vector<Token>& tokens, int& idx) {
 	const Token& token = tokens[idx];
 	++idx;
 	switch (token.type) {
 		case TOK_IDENTIFIER:
 			if (tokens[idx].type == TOK_LPAREN) {
-				return std::make_unique<CallExprAST>(
-					token.literal, parseArgList(tokens, ++idx));
+				return std::make_unique<CallExprAST>(token.literal, parseArgList(tokens, ++idx));
 			}
 			return std::make_unique<VariableAST>(token.literal, "");
 		case TOK_INTEGER:
@@ -80,8 +76,7 @@ static std::unique_ptr<BaseASTNode> parsePrimary(
 			if (!expr) return expr;
 
 			if (tokens[idx].type != TOK_RPAREN) {
-				compilationError(token.line,
-								 "Expected ')', got: " + token.literal);
+				compilationError(token.line, "Expected ')', got: " + token.literal);
 			}
 			++idx;
 			return expr;
@@ -93,8 +88,7 @@ static std::unique_ptr<BaseASTNode> parsePrimary(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<BaseASTNode> parseUnary(
-	const std::vector<Token>& tokens, int& idx) {
+static std::unique_ptr<BaseASTNode> parseUnary(const std::vector<Token>& tokens, int& idx) {
 	const Token& token = tokens[idx];
 	if (token.type == TOK_MINUS) {
 		++idx;
@@ -107,9 +101,8 @@ static std::unique_ptr<BaseASTNode> parseUnary(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<BaseASTNode> parseBinaryOp(
-        const std::vector<Token>& tokens, int& idx,
-        std::unique_ptr<BaseASTNode> left, int precedence) {
+static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& tokens, int& idx,
+												  std::unique_ptr<BaseASTNode> left, int precedence) {
 	while (true) {
 		auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
 		if (binOpPrecedence < precedence) {
@@ -124,27 +117,23 @@ static std::unique_ptr<BaseASTNode> parseBinaryOp(
 		auto nextPrecedence = getTokenPrecedence(tokens[idx].type);
 
 		if (binOpPrecedence < nextPrecedence) {
-			right = parseBinaryOp(tokens, idx, std::move(right),
-								  binOpPrecedence + 1);
+			right = parseBinaryOp(tokens, idx, std::move(right), binOpPrecedence + 1);
 			if (!right) return right;
 		}
 
-		left = std::make_unique<BinaryExprAST>(std::move(left),
-											   std::move(right), token.type);
+		left = std::make_unique<BinaryExprAST>(std::move(left), std::move(right), token.type);
 	}
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<BaseASTNode> parseExpression(
-	const std::vector<Token>& tokens, int& idx) {
+static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx) {
 	auto lhs = parseUnary(tokens, idx);
 	if (!lhs) return nullptr;
 
 	return parseBinaryOp(tokens, idx, std::move(lhs), 0);
 }
 
-static std::unique_ptr<PrototypeAST> parsePrototype(
-	const std::vector<Token>& tokens, int& idx) {
+static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& tokens, int& idx) {
 	std::string name = tokens[idx].literal;
 	idx++;
 	if (tokens[idx].type != TOK_LPAREN) {
@@ -159,23 +148,20 @@ static std::unique_ptr<PrototypeAST> parsePrototype(
 		std::pair<std::string, std::string> nextPair;
 
 		if (tokens[idx].type != TOK_IDENTIFIER) {
-			compilationError(tokens[idx].line,
-							 "Expected identifier, got " + tokens[idx].literal);
+			compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
 			return nullptr;
 		}
 		nextPair.first = tokens[idx].literal;
 		++idx;
 
 		if (tokens[idx].type != TOK_COLON) {
-			compilationError(tokens[idx].line,
-							 "Expected \":\" , got " + tokens[idx].literal);
+			compilationError(tokens[idx].line, "Expected \":\" , got " + tokens[idx].literal);
 			return nullptr;
 		}
 		++idx;
 
 		if (tokens[idx].type != TOK_IDENTIFIER) {
-			compilationError(tokens[idx].line,
-							 "Expected identifier, got " + tokens[idx].literal);
+			compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
 			return nullptr;
 		}
 		nextPair.second = tokens[idx].literal;
@@ -189,15 +175,13 @@ static std::unique_ptr<PrototypeAST> parsePrototype(
 	++idx;
 
 	if (tokens[idx].type != TOK_OUTPUT_TYPE) {
-		compilationError(tokens[idx].line,
-						 "Expected \"->\" , got " + tokens[idx].literal);
+		compilationError(tokens[idx].line, "Expected \"->\" , got " + tokens[idx].literal);
 		return nullptr;
 	}
 	++idx;
 
 	if (tokens[idx].type != TOK_IDENTIFIER) {
-		compilationError(tokens[idx].line,
-						 "Expected return type , got " + tokens[idx].literal);
+		compilationError(tokens[idx].line, "Expected return type , got " + tokens[idx].literal);
 		return nullptr;
 	}
 	std::string returnType = tokens[idx].literal;
@@ -206,21 +190,16 @@ static std::unique_ptr<PrototypeAST> parsePrototype(
 	return std::make_unique<PrototypeAST>(name, returnType, args);
 }
 
-static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
-											 int& idx);
-static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens,
-											  int& idx);
-static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens,
-										int& idx);
+static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx);
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens,
-											int& idx) {
+static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens, int& idx) {
 	std::vector<std::unique_ptr<BaseASTNode>> expressions;
 
 	if (tokens[idx].type != TOK_LBRACE) {
-		compilationError(tokens[idx].line,
-						 "Expected \"{\" , got " + tokens[idx].literal);
+		compilationError(tokens[idx].line, "Expected \"{\" , got " + tokens[idx].literal);
 		return nullptr;
 	}
 
@@ -251,9 +230,7 @@ static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens,
 		} else {
 			auto expr = parseExpression(tokens, idx);
 			if (!expr) {
-				compilationError(
-					tokens[idx].line,
-					"Expected \"}\" or expression, got " + tokens[idx].literal);
+				compilationError(tokens[idx].line, "Expected \"}\" or expression, got " + tokens[idx].literal);
 				return nullptr;
 			}
 			if (shouldPush) expressions.push_back(std::move(expr));
@@ -265,8 +242,7 @@ static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens,
 	return std::make_unique<ScopeAST>(std::move(expressions));
 }
 
-static std::unique_ptr<FunctionAST> parseFunction(
-	const std::vector<Token>& tokens, int& idx) {
+static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& tokens, int& idx) {
 	std::unique_ptr<PrototypeAST> prototype = parsePrototype(tokens, idx);
 
 	if (!prototype) {
@@ -279,8 +255,7 @@ static std::unique_ptr<FunctionAST> parseFunction(
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
-											 int& idx) {
+static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, int& idx) {
 	++idx;
 
 	bool bracketedCondition = tokens[idx].type == TOK_LPAREN;
@@ -292,8 +267,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
 	std::unique_ptr<BaseASTNode> condition = parseExpression(tokens, idx);
 	if (bracketedCondition) {
 		if (tokens[idx].type != TOK_RPAREN) {
-			compilationError(tokens[idx].line,
-							 "Expected \"(\", got: " + tokens[idx].literal);
+			compilationError(tokens[idx].line, "Expected \"(\", got: " + tokens[idx].literal);
 			return nullptr;
 		}
 		++idx;
@@ -308,8 +282,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
 	} else {
 		auto expr = parseExpression(tokens, idx);
 		if (!expr) {
-			compilationError(tokens[idx].line,
-							 "Couldn't parse true branch expression");
+			compilationError(tokens[idx].line, "Couldn't parse true branch expression");
 			return nullptr;
 		}
 		// TODO: This doesn't work for some reason with initializer-list ?
@@ -338,13 +311,10 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens,
 		}
 	}
 
-	return std::make_unique<IfAST>(std::move(condition),
-								   std::move(trueBranchScope),
-								   std::move(falseBranchScope));
+	return std::make_unique<IfAST>(std::move(condition), std::move(trueBranchScope), std::move(falseBranchScope));
 }
 
-static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens,
-											  int& idx) {
+static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, int& idx) {
 	std::unique_ptr<BaseASTNode> expression = parseExpression(tokens, idx);
 
 	if (!expression) {
@@ -355,11 +325,9 @@ static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens,
 	return std::make_unique<ReturnAST>(std::move(expression));
 }
 
-static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens,
-										int& idx) {
+static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx) {
 	if (tokens[idx].type != TOK_IDENTIFIER) {
-		compilationError(tokens[idx].line,
-						 "Expected identifier, got " + tokens[idx].literal);
+		compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
 		return nullptr;
 	}
 	std::string name = tokens[idx].literal;
@@ -375,9 +343,7 @@ static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens,
 	if (typeSpecified) {
 		++idx;
 		if (tokens[idx].type != TOK_IDENTIFIER) {
-			compilationError(
-				tokens[idx].line,
-				"Expected type identifier, got " + tokens[idx].literal);
+			compilationError(tokens[idx].line, "Expected type identifier, got " + tokens[idx].literal);
 			return nullptr;
 		}
 		type = tokens[idx].literal;
@@ -395,8 +361,8 @@ static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens,
 	return std::make_unique<LetAST>(name, type, std::move(initializer));
 }
 
-static std::unique_ptr<ModuleAST> parseEverything(
-	const std::vector<Token>& tokens, std::unique_ptr<llvm::Module> module) {
+static std::unique_ptr<ModuleAST> parseEverything(const std::vector<Token>& tokens,
+												  std::unique_ptr<llvm::Module> module) {
 	std::vector<std::unique_ptr<BaseASTNode>> result;
 	int idx = 0;
 	while (idx < tokens.size()) {
@@ -410,8 +376,7 @@ static std::unique_ptr<ModuleAST> parseEverything(
 		} else if (tokens[idx].type == TOK_EOF) {
 			break;
 		} else {
-			compilationError(tokens[idx].line,
-							 "Unexpected token " + tokens[idx].literal);
+			compilationError(tokens[idx].line, "Unexpected token " + tokens[idx].literal);
 			++idx;
 		}
 	}

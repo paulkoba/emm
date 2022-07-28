@@ -51,9 +51,7 @@ class BaseASTNode {
 	}
 
 	// NOLINTNEXTLINE(misc-no-recursion)
-	virtual void createVariableInNearestScope(const std::string &name,
-											  const std::string &type,
-											  llvm::Value *value) {
+	virtual void createVariableInNearestScope(const std::string &name, const std::string &type, llvm::Value *value) {
 		if (parent) {
 			parent->createVariableInNearestScope(name, type, value);
 		}
@@ -87,13 +85,11 @@ class I64AST : public BaseASTNode {
 	explicit I64AST(int64_t value) : value(value) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		return std::to_string((int64_t)this) + " [label=\"I64 " +
-			   std::to_string(value) + "\"]\n";
+		return std::to_string((int64_t)this) + " [label=\"I64 " + std::to_string(value) + "\"]\n";
 	}
 
 	llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
-		return llvm::ConstantInt::get(builder.getContext(),
-									  llvm::APInt(64, value, true));
+		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value, true));
 	}
 };
 
@@ -102,12 +98,10 @@ class VariableAST : public BaseASTNode {
 	std::string type;
 
    public:
-	VariableAST(std::string name, std::string type)
-		: name(std::move(name)), type(std::move(type)) {}
+	VariableAST(std::string name, std::string type) : name(std::move(name)), type(std::move(type)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		return std::to_string((int64_t)this) + " [label=\"Variable " + name +
-			   ":" + type + "\"]\n";
+		return std::to_string((int64_t)this) + " [label=\"Variable " + name + ":" + type + "\"]\n";
 	}
 
 	llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
@@ -137,28 +131,24 @@ class BinaryExprAST : public BaseASTNode {
 	TokenType op;
 
    public:
-	BinaryExprAST(std::unique_ptr<BaseASTNode> lhs,
-                  std::unique_ptr<BaseASTNode> rhs, TokenType op)
+	BinaryExprAST(std::unique_ptr<BaseASTNode> lhs, std::unique_ptr<BaseASTNode> rhs, TokenType op)
 		: lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
 		std::string output;
 		if (lhs) output += lhs->generateDOTHeader();
 		if (rhs) output += rhs->generateDOTHeader();
-		return output + std::to_string((int64_t)this) +
-			   " [label=\"BinaryExprAST" + tokenTypeToString(op) + "\"]\n";
+		return output + std::to_string((int64_t)this) + " [label=\"BinaryExprAST" + tokenTypeToString(op) + "\"]\n";
 	}
 
 	std::string generateDOT() override {
 		std::string output;
 		if (lhs) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)lhs.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)lhs.get()) + "\n";
 			output += lhs->generateDOT();
 		}
 		if (rhs) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)rhs.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)rhs.get()) + "\n";
 			output += rhs->generateDOT();
 		}
 		return output;
@@ -170,8 +160,7 @@ class BinaryExprAST : public BaseASTNode {
 		if (!lhsValue || !rhsValue) return nullptr;
 
 		// TODO: Properly handle different types
-		auto r = buildBuiltinIntegerBinOp(builder, "i64", "i64", lhsValue,
-										  rhsValue, op);
+		auto r = buildBuiltinIntegerBinOp(builder, "i64", "i64", lhsValue, rhsValue, op);
 		return r;
 	}
 
@@ -192,21 +181,18 @@ class UnaryOpAST : public BaseASTNode {
 	std::string op;
 
    public:
-	UnaryOpAST(std::unique_ptr<BaseASTNode> operand, std::string op)
-		: operand(std::move(operand)), op(std::move(op)) {}
+	UnaryOpAST(std::unique_ptr<BaseASTNode> operand, std::string op) : operand(std::move(operand)), op(std::move(op)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
 		std::string output;
 		if (operand) output += operand->generateDOTHeader();
-		return output + std::to_string((int64_t)this) + " [label=\"UnaryOpAST" +
-			   op + "\"]\n";
+		return output + std::to_string((int64_t)this) + " [label=\"UnaryOpAST" + op + "\"]\n";
 	}
 
 	std::string generateDOT() override {
 		std::string output;
 		if (operand) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)operand.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)operand.get()) + "\n";
 			operand->generateDOT();
 		}
 		return output;
@@ -225,8 +211,7 @@ class CallExprAST : public BaseASTNode {
 	std::vector<std::unique_ptr<BaseASTNode>> args;
 
    public:
-	CallExprAST(std::string name,
-				std::vector<std::unique_ptr<BaseASTNode>> args)
+	CallExprAST(std::string name, std::vector<std::unique_ptr<BaseASTNode>> args)
 		: name(std::move(name)), args(std::move(args)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -234,15 +219,13 @@ class CallExprAST : public BaseASTNode {
 		for (const auto &arg : args) {
 			output += arg->generateDOTHeader();
 		}
-		return output + std::to_string((int64_t)this) +
-			   " [label=\"CallExprAST\"]\n";
+		return output + std::to_string((int64_t)this) + " [label=\"CallExprAST\"]\n";
 	}
 
 	std::string generateDOT() override {
 		std::string output;
 		for (const auto &arg : args) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)arg.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)arg.get()) + "\n";
 			output += arg->generateDOT();
 		}
 		return output;
@@ -258,8 +241,7 @@ class CallExprAST : public BaseASTNode {
 	llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
 		auto func = getModule()->getFunction(name);
 		if (!func) {
-			std::cerr << "Error: Function " << name << " not found"
-					  << std::endl;
+			std::cerr << "Error: Function " << name << " not found" << std::endl;
 			return nullptr;
 		}
 
@@ -278,15 +260,11 @@ class PrototypeAST : public BaseASTNode {
 	friend class FunctionAST;
 
    public:
-	PrototypeAST(std::string name, std::string returnType,
-				 std::vector<std::pair<std::string, std::string>> args)
-		: name(std::move(name)),
-		  returnType(std::move(returnType)),
-		  args(std::move(args)) {}
+	PrototypeAST(std::string name, std::string returnType, std::vector<std::pair<std::string, std::string>> args)
+		: name(std::move(name)), returnType(std::move(returnType)), args(std::move(args)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output = std::to_string((int64_t)this) +
-							 " [label=\"PrototypeAST " + name + "; Args: ";
+		std::string output = std::to_string((int64_t)this) + " [label=\"PrototypeAST " + name + "; Args: ";
 
 		for (const auto &arg : args) {
 			output += " " + arg.first + ":" + arg.second;
@@ -304,10 +282,10 @@ class PrototypeAST : public BaseASTNode {
 			argTypes.push_back(llvm::Type::getInt64Ty(builder.getContext()));
 		}
 
-		llvm::FunctionType *functionType = llvm::FunctionType::get(
-			llvm::Type::getInt64Ty(builder.getContext()), argTypes, false);
-		llvm::Function *function = llvm::Function::Create(
-			functionType, llvm::Function::ExternalLinkage, name, getModule());
+		llvm::FunctionType *functionType =
+			llvm::FunctionType::get(llvm::Type::getInt64Ty(builder.getContext()), argTypes, false);
+		llvm::Function *function =
+			llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, name, getModule());
 
 		std::size_t i = 0;
 		for (auto &arg : function->args()) {
@@ -328,12 +306,10 @@ class ScopeAST : public BaseASTNode {
 	friend class IfAST;
 
    public:
-	explicit ScopeAST(std::vector<std::unique_ptr<BaseASTNode>> statements)
-		: statements(std::move(statements)) {}
+	explicit ScopeAST(std::vector<std::unique_ptr<BaseASTNode>> statements) : statements(std::move(statements)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output =
-			std::to_string((int64_t)this) + " [label=\"ScopeAST\"]\n";
+		std::string output = std::to_string((int64_t)this) + " [label=\"ScopeAST\"]\n";
 		for (const auto &statement : statements) {
 			output += statement->generateDOTHeader();
 		}
@@ -343,8 +319,7 @@ class ScopeAST : public BaseASTNode {
 	[[nodiscard]] std::string generateDOT() override {
 		std::string output;
 		for (const auto &statement : statements) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)statement.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)statement.get()) + "\n";
 			output += statement->generateDOT();
 		}
 		return output;
@@ -365,9 +340,7 @@ class ScopeAST : public BaseASTNode {
 		}
 	}
 
-	void createVariableInNearestScope(const std::string &name,
-									  const std::string &type,
-									  llvm::Value *value) override {
+	void createVariableInNearestScope(const std::string &name, const std::string &type, llvm::Value *value) override {
 		variables[name] = Variable(name, type, value);
 	}
 
@@ -387,13 +360,11 @@ class FunctionAST : public BaseASTNode {
 	std::unique_ptr<ScopeAST> body;
 
    public:
-	FunctionAST(std::unique_ptr<PrototypeAST> proto,
-				std::unique_ptr<ScopeAST> body)
+	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
 		: proto(std::move(proto)), body(std::move(body)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output =
-			std::to_string((int64_t)this) + " [label=\"FunctionAST\"]\n";
+		std::string output = std::to_string((int64_t)this) + " [label=\"FunctionAST\"]\n";
 		if (proto) output += proto->generateDOTHeader();
 		if (body) output += body->generateDOTHeader();
 
@@ -403,13 +374,11 @@ class FunctionAST : public BaseASTNode {
 	[[nodiscard]] std::string generateDOT() override {
 		std::string output;
 		if (proto) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)proto.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)proto.get()) + "\n";
 			output += proto->generateDOT();
 		}
 		if (body) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)body.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)body.get()) + "\n";
 			output += body->generateDOT();
 		}
 		return output;
@@ -428,13 +397,11 @@ class FunctionAST : public BaseASTNode {
 			return nullptr;
 		}
 
-		llvm::BasicBlock *entryBlock =
-			llvm::BasicBlock::Create(builder.getContext(), "entry", function);
+		llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
 		builder.SetInsertPoint(entryBlock);
 
 		for (auto &arg : function->args()) {
-			body->createVariableInNearestScope((std::string)arg.getName(),
-											   "i64", &arg);
+			body->createVariableInNearestScope((std::string)arg.getName(), "i64", &arg);
 		}
 
 		if (body) {
@@ -462,16 +429,12 @@ class IfAST : public BaseASTNode {
 	std::unique_ptr<ScopeAST> falseBranch;
 
    public:
-	IfAST(std::unique_ptr<BaseASTNode> condition,
-		  std::unique_ptr<ScopeAST> trueBranch,
+	IfAST(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<ScopeAST> trueBranch,
 		  std::unique_ptr<ScopeAST> falseBranch)
-		: condition(std::move(condition)),
-		  trueBranch(std::move(trueBranch)),
-		  falseBranch(std::move(falseBranch)) {}
+		: condition(std::move(condition)), trueBranch(std::move(trueBranch)), falseBranch(std::move(falseBranch)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output =
-			std::to_string((int64_t)this) + " [label=\"IfAST\"]\n";
+		std::string output = std::to_string((int64_t)this) + " [label=\"IfAST\"]\n";
 		if (condition) output += condition->generateDOTHeader();
 		if (trueBranch) output += trueBranch->generateDOTHeader();
 		if (falseBranch) output += falseBranch->generateDOTHeader();
@@ -482,18 +445,15 @@ class IfAST : public BaseASTNode {
 	[[nodiscard]] std::string generateDOT() override {
 		std::string output;
 		if (condition) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)condition.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)condition.get()) + "\n";
 			output += condition->generateDOT();
 		}
 		if (trueBranch) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)trueBranch.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)trueBranch.get()) + "\n";
 			output += trueBranch->generateDOT();
 		}
 		if (falseBranch) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)falseBranch.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)falseBranch.get()) + "\n";
 			output += falseBranch->generateDOT();
 		}
 		return output;
@@ -520,22 +480,16 @@ class IfAST : public BaseASTNode {
 			return nullptr;
 		}
 
-		bool trueBranchReturn = !trueBranch->statements.empty() &&
-								trueBranch->statements.back()->finalInScope();
-		bool falseBranchReturn = !falseBranch->statements.empty() &&
-								 falseBranch->statements.back()->finalInScope();
+		bool trueBranchReturn = !trueBranch->statements.empty() && trueBranch->statements.back()->finalInScope();
+		bool falseBranchReturn = !falseBranch->statements.empty() && falseBranch->statements.back()->finalInScope();
 
-		llvm::Value *conditionBool = builder.CreateICmpNE(
-			conditionValue,
-			llvm::ConstantInt::get(conditionValue->getType(), 0));
+		llvm::Value *conditionBool =
+			builder.CreateICmpNE(conditionValue, llvm::ConstantInt::get(conditionValue->getType(), 0));
 		llvm::Function *function = builder.GetInsertBlock()->getParent();
-		llvm::BasicBlock *trueBlock =
-			llvm::BasicBlock::Create(builder.getContext(), "true", function);
-		llvm::BasicBlock *falseBlock =
-			llvm::BasicBlock::Create(builder.getContext(), "false");
+		llvm::BasicBlock *trueBlock = llvm::BasicBlock::Create(builder.getContext(), "true", function);
+		llvm::BasicBlock *falseBlock = llvm::BasicBlock::Create(builder.getContext(), "false");
 		llvm::BasicBlock *exitBlock = nullptr;
-		if (!falseBranchReturn || !trueBranchReturn)
-			exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
+		if (!falseBranchReturn || !trueBranchReturn) exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
 		builder.CreateCondBr(conditionBool, trueBlock, falseBlock);
 		builder.SetInsertPoint(trueBlock);
 		if (trueBranch) {
@@ -562,12 +516,10 @@ class ReturnAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> value;
 
    public:
-	explicit ReturnAST(std::unique_ptr<BaseASTNode> value)
-		: value(std::move(value)) {}
+	explicit ReturnAST(std::unique_ptr<BaseASTNode> value) : value(std::move(value)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output =
-			std::to_string((int64_t)this) + " [label=\"ReturnAST\"]\n";
+		std::string output = std::to_string((int64_t)this) + " [label=\"ReturnAST\"]\n";
 		if (value) output += value->generateDOTHeader();
 		return output;
 	}
@@ -575,8 +527,7 @@ class ReturnAST : public BaseASTNode {
 	[[nodiscard]] std::string generateDOT() override {
 		std::string output;
 		if (value) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)value.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)value.get()) + "\n";
 			output += value->generateDOT();
 		}
 		return output;
@@ -607,15 +558,11 @@ class LetAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> value;
 
    public:
-	LetAST(std::string name, std::string type,
-		   std::unique_ptr<BaseASTNode> value)
-		: name(std::move(name)),
-		  type(std::move(type)),
-		  value(std::move(value)) {}
+	LetAST(std::string name, std::string type, std::unique_ptr<BaseASTNode> value)
+		: name(std::move(name)), type(std::move(type)), value(std::move(value)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output = std::to_string((int64_t)this) +
-							 " [label=\"LetAST " + name + ":" + type + "\"]\n";
+		std::string output = std::to_string((int64_t)this) + " [label=\"LetAST " + name + ":" + type + "\"]\n";
 		if (value) output += value->generateDOTHeader();
 		return output;
 	}
@@ -623,8 +570,7 @@ class LetAST : public BaseASTNode {
 	[[nodiscard]] std::string generateDOT() override {
 		std::string output;
 		if (value) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)value.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)value.get()) + "\n";
 			output += value->generateDOT();
 		}
 		return output;
@@ -636,13 +582,11 @@ class ModuleAST : public BaseASTNode {
 	std::unique_ptr<llvm::Module> module = nullptr;
 
    public:
-	explicit ModuleAST(std::vector<std::unique_ptr<BaseASTNode>> expressions,
-					   std::unique_ptr<llvm::Module> module)
+	explicit ModuleAST(std::vector<std::unique_ptr<BaseASTNode>> expressions, std::unique_ptr<llvm::Module> module)
 		: expressions(std::move(expressions)), module(std::move(module)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output =
-			std::to_string((int64_t)this) + " [label=\"ModuleAST\"]\n";
+		std::string output = std::to_string((int64_t)this) + " [label=\"ModuleAST\"]\n";
 		for (const auto &expression : expressions) {
 			output += expression->generateDOTHeader();
 		}
@@ -652,8 +596,7 @@ class ModuleAST : public BaseASTNode {
 	[[nodiscard]] std::string generateDOT() override {
 		std::string output;
 		for (const auto &expression : expressions) {
-			output += std::to_string((int64_t)this) + " -> " +
-					  std::to_string((int64_t)expression.get()) + "\n";
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)expression.get()) + "\n";
 			output += expression->generateDOT();
 		}
 		return output;

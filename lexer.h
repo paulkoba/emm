@@ -43,8 +43,7 @@ std::vector<Token> lex(const std::string& input) {
 		if (state == LEXER_STATE_STRING) {
 			// TODO: escape sequences other than "
 			if (input[pos] == '"') {
-				if (!current.literal.empty() &&
-					current.literal.back() == '\\') {
+				if (!current.literal.empty() && current.literal.back() == '\\') {
 					current.literal.pop_back();
 					current.literal += '"';
 				} else {
@@ -99,8 +98,7 @@ std::vector<Token> lex(const std::string& input) {
 		}
 
 		if (std::isdigit(input[pos])) {
-			if (current.type != TOK_NONE && current.type != TOK_INTEGER &&
-				current.type != TOK_IDENTIFIER) {
+			if (current.type != TOK_NONE && current.type != TOK_INTEGER && current.type != TOK_IDENTIFIER) {
 				addPreviousToken();
 				state = LEXER_STATE_START;	// i.e. go into the next condition
 			}
@@ -174,8 +172,7 @@ std::vector<Token> lex(const std::string& input) {
 			continue;
 		}
 
-		std::cout << "Unexpected character: " << input[pos] << " at line "
-				  << line << std::endl;
+		std::cout << "Unexpected character: " << input[pos] << " at line " << line << std::endl;
 		return {};
 	}
 

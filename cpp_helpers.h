@@ -39,14 +39,12 @@ struct std::hash<std::vector<T>> {
 };
 
 template <typename T, typename S>
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os,
-										  const std::pair<T, S>& f) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const std::pair<T, S>& f) {
 	os << "{" << f.first << ", " << f.second << "}";
 	return os;
 }
 template <typename T, typename S>
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os,
-										  const std::unordered_map<T, S>& f) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const std::unordered_map<T, S>& f) {
 	for (const auto& i : f) {
 		os << "{" << i.first << ": " << i.second << "}\n";
 	}
@@ -55,8 +53,7 @@ template <typename T, typename S>
 }
 
 template <typename T>
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os,
-										  const std::vector<T>& f) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const std::vector<T>& f) {
 	if (f.empty()) {
 		os << "{}";
 		return os;
@@ -70,8 +67,7 @@ template <typename T>
 }
 
 template <typename T>
-[[maybe_unused]] std::ostream& operator<<(std::ostream& os,
-										  const std::priority_queue<T>& f) {
+[[maybe_unused]] std::ostream& operator<<(std::ostream& os, const std::priority_queue<T>& f) {
 	std::priority_queue<T> cp = f;
 	if (f.empty()) return os;
 	os << "{" << cp.top();
@@ -85,8 +81,7 @@ template <typename T>
 }
 
 template <typename T, typename S>
-[[maybe_unused]] std::istream& operator>>(std::istream& is,
-										  std::pair<T, S>& f) {
+[[maybe_unused]] std::istream& operator>>(std::istream& is, std::pair<T, S>& f) {
 	is >> f.first >> f.second;
 	return is;
 }

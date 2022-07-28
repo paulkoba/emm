@@ -53,9 +53,8 @@ enum TokenType {
 // TODO: Get rid of static variable
 TokenType tryMatchKeyword(const std::string& input) {
 	static std::unordered_map<std::string, TokenType> keywords = {
-		{"if", TOK_IF},			{"else", TOK_ELSE},	  {"while", TOK_WHILE},
-		{"return", TOK_RETURN}, {"let", TOK_LET},	  {"fn", TOK_FN},
-		{"true", TOK_TRUE},		{"false", TOK_FALSE}, {"mut", TOK_MUT},
+		{"if", TOK_IF}, {"else", TOK_ELSE}, {"while", TOK_WHILE}, {"return", TOK_RETURN}, {"let", TOK_LET},
+		{"fn", TOK_FN}, {"true", TOK_TRUE}, {"false", TOK_FALSE}, {"mut", TOK_MUT},
 	};
 
 	return keywords.count(input) ? keywords[input] : TOK_NONE;
@@ -181,15 +180,13 @@ struct Token {
 	int64_t line;
 
 	Token() : type(TOK_NONE), line(0) {}
-	Token(TokenType type, std::string literal, int line)
-		: type(type), literal(std::move(literal)), line(line) {}
+	Token(TokenType type, std::string literal, int line) : type(type), literal(std::move(literal)), line(line) {}
 
 	friend std::ostream& operator<<(std::ostream& os, const Token& token);
 };
 
 std::ostream& operator<<(std::ostream& os, const Token& token) {
-	os << "{" << tokenTypeToString(token.type) << ", \"" << token.literal
-	   << "\", " << token.line << "}";
+	os << "{" << tokenTypeToString(token.type) << ", \"" << token.literal << "\", " << token.line << "}";
 	return os;
 }
 

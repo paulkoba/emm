@@ -12,8 +12,7 @@
 
 template <typename T>
 void compilationError(int64_t line, T arg) {
-	std::cout << "Compilation error at line " << line << ": " << arg
-			  << std::endl;
+	std::cout << "Compilation error at line " << line << ": " << arg << std::endl;
 }
 
 template <typename T>

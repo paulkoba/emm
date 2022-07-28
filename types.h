@@ -21,27 +21,21 @@ bool isBuiltinType(const std::string& type) { return true; }
 
 bool isBuiltinIntegerType(const std::string& type) { return true; }
 
-llvm::Value* buildBuiltinIntegerType(llvm::IRBuilder<>& builder,
-									 const std::string& type, int64_t value) {
+llvm::Value* buildBuiltinIntegerType(llvm::IRBuilder<>& builder, const std::string& type, int64_t value) {
 	if (type == "I64") {
-		return llvm::ConstantInt::get(builder.getContext(),
-									  llvm::APInt(64, value));
+		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value));
 	} else if (type == "I32") {
-		return llvm::ConstantInt::get(builder.getContext(),
-									  llvm::APInt(32, value));
+		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(32, value));
 	} else if (type == "I16") {
-		return llvm::ConstantInt::get(builder.getContext(),
-									  llvm::APInt(16, value));
+		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(16, value));
 	} else if (type == "I8") {
-		return llvm::ConstantInt::get(builder.getContext(),
-									  llvm::APInt(8, value));
+		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(8, value));
 	} else {
 		return nullptr;
 	}
 }
 
-llvm::Value* extendTo64Bits(llvm::IRBuilder<>& builder, const std::string& type,
-							llvm::Value* lhs) {
+llvm::Value* extendTo64Bits(llvm::IRBuilder<>& builder, const std::string& type, llvm::Value* lhs) {
 	if (type == "i64") {
 		return lhs;
 	} else if (type == "i32") {
@@ -58,11 +52,8 @@ llvm::Value* extendTo64Bits(llvm::IRBuilder<>& builder, const std::string& type,
 	}
 }
 
-llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder,
-									  const std::string& lhsType,
-									  const std::string& rhsType,
-									  llvm::Value* lhs, llvm::Value* rhs,
-									  TokenType op) {
+llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, const std::string& lhsType,
+									  const std::string& rhsType, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
 	// Extend integers to 64 bits if they are smaller than 64 bits
 	lhs = extendTo64Bits(builder, lhsType, lhs);
 	rhs = extendTo64Bits(builder, rhsType, rhs);
