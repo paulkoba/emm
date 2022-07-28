@@ -10,14 +10,15 @@
 
 // TODO: This doesn't work
 
-template<typename ...Args>
-void compilationError(int64_t line, Args&& ...args) {
-    std::cout << "Compilation error at line " << line << ": " << (... << args) << std::endl;
+template <typename T>
+void compilationError(int64_t line, T arg) {
+	std::cout << "Compilation error at line " << line << ": " << arg
+			  << std::endl;
 }
 
-template<typename ...Args>
-void compilationError(Args&& ...args) {
-    (std::cout << ... << args) << std::endl;
+template <typename T>
+void compilationError(T arg) {
+	std::cout << arg << std::endl;
 }
 
-#endif //EMMC_LOGGING_H
+#endif	// EMMC_LOGGING_H
