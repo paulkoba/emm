@@ -15,48 +15,40 @@
 #include "logging.h"
 #include "token.h"
 
-// TODO: This will need to be completely redone once I start implementing custom
-// types
+// TODO: This will need to be completely redone once I start implementing custom types
 bool isBuiltinType(const std::string& type) { return true; }
-
+bool isBuiltinType(llvm::Type* value) { return true; }
 bool isBuiltinIntegerType(const std::string& type) { return true; }
+bool isBuiltinIntegerType(llvm::Type* value) { return true; }
 
-llvm::Value* buildBuiltinIntegerType(llvm::IRBuilder<>& builder, const std::string& type, int64_t value) {
-	if (type == "I64") {
-		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value));
-	} else if (type == "I32") {
-		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(32, value));
-	} else if (type == "I16") {
-		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(16, value));
-	} else if (type == "I8") {
-		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(8, value));
-	} else {
-		return nullptr;
-	}
-}
+void equalizeBitWidth(llvm::IRBuilder<>& builder, llvm::Value *&lhs, llvm::Value *&rhs, bool isSigned = true) {
+    auto lhsType = lhs->getType();
+    auto rhsType = rhs->getType();
 
-llvm::Value* extendTo64Bits(llvm::IRBuilder<>& builder, const std::string& type, llvm::Value* lhs) {
-	if (type == "i64") {
-		return lhs;
-	} else if (type == "i32") {
-		std::cerr << "Warning: extending 32-bit integer to 64-bit" << std::endl;
-		return builder.CreateZExt(lhs, builder.getInt64Ty());
-	} else if (type == "i16") {
-		std::cerr << "Warning: extending 16-bit integer to 64-bit" << std::endl;
-		return builder.CreateZExt(lhs, builder.getInt64Ty());
-	} else if (type == "i8") {
-		std::cerr << "Warning: extending 8-bit integer to 64-bit" << std::endl;
-		return builder.CreateZExt(lhs, builder.getInt64Ty());
-	} else {
-		return nullptr;
-	}
+    if (lhsType->isIntegerTy() && rhsType->isIntegerTy()) {
+        auto lhsBitWidth = lhsType->getIntegerBitWidth();
+        auto rhsBitWidth = rhsType->getIntegerBitWidth();
+
+        if (lhsBitWidth > rhsBitWidth) {
+            if(isSigned) {
+                rhs = builder.CreateSExt(rhs, lhsType);
+            } else {
+                rhs = builder.CreateZExt(rhs, lhsType);
+            }
+        } else if (lhsBitWidth < rhsBitWidth) {
+            if(isSigned) {
+                lhs = builder.CreateSExt(lhs, rhsType);
+            } else {
+                lhs = builder.CreateZExt(lhs, rhsType);
+            }
+        }
+    }
 }
 
 llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, const std::string& lhsType,
 									  const std::string& rhsType, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
-	// Extend integers to 64 bits if they are smaller than 64 bits
-	lhs = extendTo64Bits(builder, lhsType, lhs);
-	rhs = extendTo64Bits(builder, rhsType, rhs);
+	// Extend integers to the widest of their types
+    equalizeBitWidth(builder, lhs, rhs);
 
 	switch (op) {
 		case TOK_PLUS:
@@ -73,6 +65,29 @@ llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, const std::str
 			compilationError("Not yet implemented.");
 			return nullptr;
 	}
+}
+
+llvm::Type* getTypeFromString(const std::string& type, llvm::IRBuilder<>& builder) {
+    if(isBuiltinType(type)) {
+        if(isBuiltinIntegerType(type)) {
+            if(type == "i64") {
+                return builder.getInt64Ty();
+            } else if(type == "i32") {
+                return builder.getInt32Ty();
+            } else if(type == "i16") {
+                return builder.getInt16Ty();
+            } else if(type == "i8") {
+                return builder.getInt8Ty();
+            } else {
+                return nullptr;
+            }
+        } else {
+            return nullptr;
+        }
+    } else {
+        compilationError("Not yet implemented.");
+        return nullptr;
+    }
 }
 
 #endif	// EMMC_TYPES_H

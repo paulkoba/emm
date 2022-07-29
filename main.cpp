@@ -15,7 +15,7 @@
 #include "compilation.h"
 
 int main() {
-    std::ifstream input("../examples/codegen.emm");
+    std::ifstream input("../examples/types.emm");
     std::stringstream buffer;
     buffer << input.rdbuf();
     auto tmp = lex(buffer.str());

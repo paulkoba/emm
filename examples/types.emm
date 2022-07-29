@@ -1,0 +1,7 @@
+fn factorial(n : i8) -> i8 {
+    if n == 0 {
+        return 1
+    } else {
+        return n * factorial(n - 1)
+    }
+}

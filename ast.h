@@ -21,12 +21,11 @@
 class Variable {
    public:
 	std::string name;
-	std::string type;
 	llvm::Value *value = nullptr;
 
    public:
-	Variable(std::string name, std::string type, llvm::Value *value)
-		: name(std::move(name)), type(std::move(type)), value(value) {}
+	Variable(std::string name, llvm::Value *value)
+		: name(std::move(name)), value(value) {}
 
 	Variable() = default;
 };
@@ -277,13 +276,13 @@ class PrototypeAST : public BaseASTNode {
 
 	llvm::Function *codegen(llvm::IRBuilder<> &builder) override {
 		std::vector<llvm::Type *> argTypes;
-		// TODO: Proper types instead of always using 64 bit integers
+
 		for (const auto &arg : args) {
-			argTypes.push_back(llvm::Type::getInt64Ty(builder.getContext()));
+			argTypes.push_back(getTypeFromString(arg.second, builder));
 		}
 
 		llvm::FunctionType *functionType =
-			llvm::FunctionType::get(llvm::Type::getInt64Ty(builder.getContext()), argTypes, false);
+			llvm::FunctionType::get(getTypeFromString(returnType, builder), argTypes, false);
 		llvm::Function *function =
 			llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, name, getModule());
 
@@ -341,7 +340,7 @@ class ScopeAST : public BaseASTNode {
 	}
 
 	void createVariableInNearestScope(const std::string &name, const std::string &type, llvm::Value *value) override {
-		variables[name] = Variable(name, type, value);
+		variables[name] = Variable(name, value);
 	}
 
 	Variable *getVariableFromNearestScope(const std::string &name) override {
@@ -401,7 +400,7 @@ class FunctionAST : public BaseASTNode {
 		builder.SetInsertPoint(entryBlock);
 
 		for (auto &arg : function->args()) {
-			body->createVariableInNearestScope((std::string)arg.getName(), "i64", &arg);
+			body->createVariableInNearestScope((std::string)arg.getName(), (std::string)toStringRef(arg.getType()), &arg);
 		}
 
 		if (body) {
