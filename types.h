@@ -15,10 +15,6 @@
 #include "logging.h"
 #include "token.h"
 
-// TODO: This will need to be completely redone once I start implementing custom types
-bool isBuiltinType(const std::string& type) { return true; }
-bool isBuiltinType(llvm::Type* value) { return true; }
-bool isBuiltinIntegerType(const std::string& type) { return true; }
 bool isBuiltinIntegerType(llvm::Type* value) { return true; }
 
 void equalizeBitWidth(llvm::IRBuilder<>& builder, llvm::Value *&lhs, llvm::Value *&rhs, bool isSigned = true) {
@@ -45,8 +41,7 @@ void equalizeBitWidth(llvm::IRBuilder<>& builder, llvm::Value *&lhs, llvm::Value
     }
 }
 
-llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, const std::string& lhsType,
-									  const std::string& rhsType, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
+llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
 	// Extend integers to the widest of their types
     equalizeBitWidth(builder, lhs, rhs);
 
@@ -61,29 +56,32 @@ llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, const std::str
 			return builder.CreateSDiv(lhs, rhs);
 		case TOK_EQUALS:
 			return builder.CreateICmpEQ(lhs, rhs);
+        case TOK_ASSIGN:
+            return builder.CreateStore(rhs, lhs);
 		default:
 			compilationError("Not yet implemented.");
 			return nullptr;
 	}
 }
 
+llvm::Value* buildBinOp(llvm::IRBuilder<>& builder, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
+    if(isBuiltinIntegerType(lhs->getType()) && isBuiltinIntegerType(rhs->getType())) {
+        return buildBuiltinIntegerBinOp(builder, lhs, rhs, op);
+    } else {
+        compilationError("Not yet implemented.");
+        return nullptr;
+    }
+}
+
 llvm::Type* getTypeFromString(const std::string& type, llvm::IRBuilder<>& builder) {
-    if(isBuiltinType(type)) {
-        if(isBuiltinIntegerType(type)) {
-            if(type == "i64") {
-                return builder.getInt64Ty();
-            } else if(type == "i32") {
-                return builder.getInt32Ty();
-            } else if(type == "i16") {
-                return builder.getInt16Ty();
-            } else if(type == "i8") {
-                return builder.getInt8Ty();
-            } else {
-                return nullptr;
-            }
-        } else {
-            return nullptr;
-        }
+    if (type == "i64") {
+        return builder.getInt64Ty();
+    } else if (type == "i32") {
+        return builder.getInt32Ty();
+    } else if (type == "i16") {
+        return builder.getInt16Ty();
+    } else if (type == "i8") {
+        return builder.getInt8Ty();
     } else {
         compilationError("Not yet implemented.");
         return nullptr;

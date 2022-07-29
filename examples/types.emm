@@ -1,3 +1,8 @@
+fn test_store(n : i32) -> i32 {
+    n = 42
+    return n
+}
+
 fn factorial(n : i8) -> i8 {
     if n == 0 {
         return 1

@@ -159,7 +159,7 @@ class BinaryExprAST : public BaseASTNode {
 		if (!lhsValue || !rhsValue) return nullptr;
 
 		// TODO: Properly handle different types
-		auto r = buildBuiltinIntegerBinOp(builder, "i64", "i64", lhsValue, rhsValue, op);
+		auto r = buildBinOp(builder, lhsValue, rhsValue, op);
 		return r;
 	}
 
