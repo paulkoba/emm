@@ -164,7 +164,9 @@ std::vector<Token> lex(const std::string& input) {
 				current = {TOK_LESS_OR_EQUAL, "<=", line};
 			} else if (current.type == TOK_GREATER) {
 				current = {TOK_GREATER_OR_EQUAL, ">=", line};
-			} else {
+			} else if (current.type == TOK_NOT) {
+                current = {TOK_NOT_EQUALS, "!=", line};
+            } else {
 				addPreviousToken();
 				current = {TOK_ASSIGN, "=", line};
 			}

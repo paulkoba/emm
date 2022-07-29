@@ -26,6 +26,17 @@ fn fibonacci(n : i32) -> i32 {
     }
 }
 
+fn comparisons(n : i64) -> i64 {
+    n < 5
+    n <= 5
+    n == 5
+    n != 5
+    n > 5
+    n >= 5
+
+    return 42
+}
+
 fn main() -> i64 {
     return factorial(120) as i64
 }

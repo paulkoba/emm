@@ -35,6 +35,16 @@ llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* l
 			return builder.CreateSDiv(lhs, rhs);
 		case TOK_EQUALS:
 			return builder.CreateICmpEQ(lhs, rhs);
+        case TOK_NOT_EQUALS:
+            return builder.CreateICmpNE(lhs, rhs);
+        case TOK_LESS:
+            return builder.CreateICmpSLT(lhs, rhs);
+        case TOK_LESS_OR_EQUAL:
+            return builder.CreateICmpSLE(lhs, rhs);
+        case TOK_GREATER:
+            return builder.CreateICmpSGT(lhs, rhs);
+        case TOK_GREATER_OR_EQUAL:
+            return builder.CreateICmpSGE(lhs, rhs);
         case TOK_MODULO:
             return builder.CreateSRem(lhs, rhs);
 		default:

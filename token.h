@@ -39,6 +39,8 @@ enum TokenType {
     TOK_AS = -24,
 	TOK_COMMA = -25,
     TOK_MODULO = -26,
+    TOK_NOT_EQUALS = -27,
+    TOK_NOT = -28,
 
 	// KEYWORDS
 	TOK_IF = -100,
@@ -98,6 +100,8 @@ TokenType getTrivialTokenType(char ch) {
 			return TOK_COLON;
 		case ',':
 			return TOK_COMMA;
+        case '!':
+            return TOK_NOT;
 		default:
 			return TOK_NONE;
 	}
@@ -177,6 +181,10 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_MUT";
         case TOK_MODULO:
             return "TOK_MODULO";
+        case TOK_NOT_EQUALS:
+            return "TOK_NOT_EQUALS";
+        case TOK_NOT:
+            return "TOK_NOT";
 		default:
 			return "UNKNOWN";
 	}

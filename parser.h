@@ -23,6 +23,7 @@ static int getTokenPrecedence(TokenType token) {
 		case TOK_LESS_OR_EQUAL:
 		case TOK_GREATER:
 		case TOK_GREATER_OR_EQUAL:
+        case TOK_NOT_EQUALS:
 			return 10;
 		case TOK_PLUS:
 		case TOK_MINUS:
@@ -77,9 +78,11 @@ static std::unique_ptr<BaseASTNode> parsePrimary(const std::vector<Token>& token
 		case TOK_INTEGER:
             if(tokens[idx].type == TOK_IDENTIFIER) {
                 const auto& type = tokens[idx].literal;
-                ++idx;
-
-                return fromLiteral(token.literal, type);
+                auto r = fromLiteral(token.literal, type);
+                if(r) {
+                    idx++;
+                    return std::move(r);
+                }
             }
 			return std::make_unique<I64AST>(std::stoll(token.literal));
 		case TOK_STRING:
