@@ -21,7 +21,7 @@ int main() {
     auto tmp = lex(buffer.str());
     std::cout << tmp << std::endl << std::endl;
     auto llvmContext = std::make_unique<llvm::LLVMContext>();
-    auto r = parseEverything(tmp, std::make_unique<llvm::Module>("some_module", *llvmContext));
+    auto r = parseFile(tmp, std::make_unique<llvm::Module>("some_module", *llvmContext));
 
     r->populateParents();
 

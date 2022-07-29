@@ -9,6 +9,11 @@
 #include "logging.h"
 #include "token.h"
 
+static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx);
+
 static int getTokenPrecedence(TokenType token) {
 	switch (token) {
 		case TOK_EQUALS:
@@ -30,8 +35,7 @@ static int getTokenPrecedence(TokenType token) {
 	}
 }
 
-static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx);
-
+// NOLINTNEXTLINE(misc-no-recursion)
 static std::vector<std::unique_ptr<BaseASTNode>> parseArgList(const std::vector<Token>& tokens, int& idx) {
 	std::vector<std::unique_ptr<BaseASTNode>> args;
 	if (idx < tokens.size() && tokens[idx].type == TOK_RPAREN) {
@@ -189,10 +193,6 @@ static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& to
 
 	return std::make_unique<PrototypeAST>(name, returnType, args);
 }
-
-static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, int& idx);
-static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, int& idx);
-static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx);
 
 // NOLINTNEXTLINE(misc-no-recursion)
 static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens, int& idx) {
@@ -361,8 +361,8 @@ static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& i
 	return std::make_unique<LetAST>(name, type, std::move(initializer));
 }
 
-static std::unique_ptr<ModuleAST> parseEverything(const std::vector<Token>& tokens,
-												  std::unique_ptr<llvm::Module> module) {
+static std::unique_ptr<ModuleAST> parseFile(const std::vector<Token>& tokens,
+                                            std::unique_ptr<llvm::Module> module) {
 	std::vector<std::unique_ptr<BaseASTNode>> result;
 	int idx = 0;
 	while (idx < tokens.size()) {

@@ -66,7 +66,7 @@ class BaseASTNode {
 		return nullptr;
 	}
 
-	virtual bool finalInScope() { return false; }
+	virtual bool isReturnStatement() { return false; }
 
 	// NOLINTNEXTLINE(misc-no-recursion)
 	virtual llvm::Module *getModule() {
@@ -138,7 +138,7 @@ class BinaryExprAST : public BaseASTNode {
 		std::string output;
 		if (lhs) output += lhs->generateDOTHeader();
 		if (rhs) output += rhs->generateDOTHeader();
-		return output + std::to_string((int64_t)this) + " [label=\"BinaryExprAST" + tokenTypeToString(op) + "\"]\n";
+		return output + std::to_string((int64_t)this) + " [label=\"BinaryExprAST " + tokenTypeToString(op) + "\"]\n";
 	}
 
 	std::string generateDOT() override {
@@ -427,7 +427,6 @@ class IfAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> condition;
 	std::unique_ptr<ScopeAST> trueBranch;
 	std::unique_ptr<ScopeAST> falseBranch;
-
    public:
 	IfAST(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<ScopeAST> trueBranch,
 		  std::unique_ptr<ScopeAST> falseBranch)
@@ -480,8 +479,8 @@ class IfAST : public BaseASTNode {
 			return nullptr;
 		}
 
-		bool trueBranchReturn = !trueBranch->statements.empty() && trueBranch->statements.back()->finalInScope();
-		bool falseBranchReturn = !falseBranch->statements.empty() && falseBranch->statements.back()->finalInScope();
+		bool trueBranchReturn = !trueBranch->statements.empty() && trueBranch->statements.back()->isReturnStatement();
+		bool falseBranchReturn = falseBranch && !falseBranch->statements.empty() && falseBranch->statements.back()->isReturnStatement();
 
 		llvm::Value *conditionBool =
 			builder.CreateICmpNE(conditionValue, llvm::ConstantInt::get(conditionValue->getType(), 0));
@@ -501,7 +500,7 @@ class IfAST : public BaseASTNode {
 		if (falseBranch) {
 			falseBranch->codegen(builder);
 		}
-		if (!falseBranchReturn) builder.CreateBr(exitBlock);
+		if (!falseBranch || !falseBranchReturn) builder.CreateBr(exitBlock);
 
 		if (exitBlock) {
 			function->getBasicBlockList().push_back(exitBlock);
@@ -549,7 +548,7 @@ class ReturnAST : public BaseASTNode {
 		}
 	}
 
-	bool finalInScope() override { return true; }
+	bool isReturnStatement() override { return true; }
 };
 
 class LetAST : public BaseASTNode {

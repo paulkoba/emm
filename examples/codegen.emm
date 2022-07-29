@@ -3,6 +3,14 @@ fn broken_test(n : i64) -> i64 {
     return n + 1
 }
 
+fn another_test(n : i64) -> i64 {
+    if n == 0 {
+        return 0
+    }
+
+    return n * another_test(n - 1)
+}
+
 fn factorial(n : i64) -> i64 {
     if n == 0 {
         return 1
