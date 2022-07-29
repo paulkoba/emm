@@ -17,33 +17,12 @@
 
 bool isBuiltinIntegerType(llvm::Type* value) { return value->isIntegerTy(); }
 
-void equalizeBitWidth(llvm::IRBuilder<>& builder, llvm::Value *&lhs, llvm::Value *&rhs, bool isSigned = true) {
-    auto lhsType = lhs->getType();
-    auto rhsType = rhs->getType();
-
-    if (lhsType->isIntegerTy() && rhsType->isIntegerTy()) {
-        auto lhsBitWidth = lhsType->getIntegerBitWidth();
-        auto rhsBitWidth = rhsType->getIntegerBitWidth();
-
-        if (lhsBitWidth > rhsBitWidth) {
-            if(isSigned) {
-                rhs = builder.CreateSExt(rhs, lhsType);
-            } else {
-                rhs = builder.CreateZExt(rhs, lhsType);
-            }
-        } else if (lhsBitWidth < rhsBitWidth) {
-            if(isSigned) {
-                lhs = builder.CreateSExt(lhs, rhsType);
-            } else {
-                lhs = builder.CreateZExt(lhs, rhsType);
-            }
-        }
-    }
-}
-
 llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
-	// Extend integers to the widest of their types
-    equalizeBitWidth(builder, lhs, rhs);
+    if(lhs->getType()->getIntegerBitWidth() != rhs->getType()->getIntegerBitWidth()) {
+        compilationError("Cannot perform binary operation on integers of different widths "
+            + std::to_string(lhs->getType()->getIntegerBitWidth()) + " and "
+            + std::to_string(rhs->getType()->getIntegerBitWidth()));
+    }
 
 	switch (op) {
 		case TOK_PLUS:
@@ -56,8 +35,8 @@ llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* l
 			return builder.CreateSDiv(lhs, rhs);
 		case TOK_EQUALS:
 			return builder.CreateICmpEQ(lhs, rhs);
-        case TOK_ASSIGN:
-            return builder.CreateStore(rhs, lhs);
+        case TOK_MODULO:
+            return builder.CreateSRem(lhs, rhs);
 		default:
 			compilationError("buildBuiltinIntegerBinOp: Not yet implemented.");
 			return nullptr;
@@ -88,12 +67,16 @@ llvm::Type* getTypeFromString(const std::string& type, llvm::IRBuilder<>& builde
     }
 }
 
-llvm::Value* createCast(llvm::IRBuilder<>& builder, llvm::Value* value, llvm::Type* type) {
+llvm::Value* createCast(llvm::IRBuilder<>& builder, llvm::Value* value, llvm::Type* type, bool isSigned = true) {
     if(value->getType() == type) {
         return value;
     } else if(value->getType()->isIntegerTy() && type->isIntegerTy()) {
         if(value->getType()->getIntegerBitWidth() < type->getIntegerBitWidth()) {
-            return builder.CreateSExt(value, type);
+            if(isSigned) {
+                return builder.CreateSExt(value, type);
+            } else {
+                return builder.CreateZExt(value, type);
+            }
         } else {
             return builder.CreateTrunc(value, type);
         }
@@ -103,10 +86,6 @@ llvm::Value* createCast(llvm::IRBuilder<>& builder, llvm::Value* value, llvm::Ty
         compilationError("createCast: Not yet implemented.");
         return nullptr;
     }
-}
-
-std::string getTypeFromLiteral(const std::string& literal) {
-    return literal;
 }
 
 #endif	// EMMC_TYPES_H

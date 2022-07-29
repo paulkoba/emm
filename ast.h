@@ -95,10 +95,8 @@ public:
 };
 
 class I64AST : public SignedIntAST {
-	int64_t value;
-
    public:
-    explicit I64AST(int64_t value) : SignedIntAST(value, 64), value(value) {}
+    explicit I64AST(int64_t value) : SignedIntAST(value, 64) {}
 };
 
 class VariableAST : public BaseASTNode {
@@ -553,6 +551,11 @@ class IfAST : public BaseASTNode {
 
 		return nullptr;
 	}
+
+    bool isReturnStatement() override {
+        return trueBranch && !trueBranch->statements.empty() && trueBranch->statements.back()->isReturnStatement()
+         && falseBranch && !falseBranch->statements.empty() && falseBranch->statements.back()->isReturnStatement();
+    }
 };
 
 class ReturnAST : public BaseASTNode {
@@ -579,6 +582,12 @@ class ReturnAST : public BaseASTNode {
 	llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
 		if (value) {
 			llvm::Value *val = value->codegen(builder);
+            // Check that the return type matches the function return type
+            if (val->getType() != builder.GetInsertBlock()->getParent()->getReturnType()) {
+                compilationError("Return type does not match function return type");
+                return nullptr;
+            }
+
 			builder.CreateRet(val);
 			return val;
 		}
@@ -661,5 +670,22 @@ class ModuleAST : public BaseASTNode {
 
 	llvm::Module *getModule() override { return module.get(); }
 };
+
+std::unique_ptr<BaseASTNode> fromLiteral(const std::string& integer, const std::string& type) {
+    // This will need to support custom structs and as a result will need to be severely modified.
+    if(type == "i8") {
+        return std::make_unique<SignedIntAST>(std::stoi(integer), 8);
+    } else if(type == "i16") {
+        return std::make_unique<SignedIntAST>(std::stoi(integer), 16);
+    } else if(type == "i32") {
+        return std::make_unique<SignedIntAST>(std::stoi(integer), 32);
+    } else if(type == "i64") {
+        return std::make_unique<SignedIntAST>(std::stoi(integer), 64);
+    } else {
+        compilationError("Unknown literal suffix");
+        return nullptr;
+    }
+}
+
 
 #endif	// EMMC_AST_H

@@ -29,6 +29,7 @@ static int getTokenPrecedence(TokenType token) {
 			return 20;
 		case TOK_PRODUCT:
 		case TOK_DIVISION:
+        case TOK_MODULO:
 			return 30;
 		case TOK_ASSIGN:
 			return 80;
@@ -75,7 +76,10 @@ static std::unique_ptr<BaseASTNode> parsePrimary(const std::vector<Token>& token
 			return std::make_unique<VariableAST>(token.literal, "");
 		case TOK_INTEGER:
             if(tokens[idx].type == TOK_IDENTIFIER) {
-                return std::make_unique<AsAST>(std::make_unique<I64AST>(std::stoll(token.literal)), getTypeFromLiteral(tokens[idx++].literal));
+                const auto& type = tokens[idx].literal;
+                ++idx;
+
+                return fromLiteral(token.literal, type);
             }
 			return std::make_unique<I64AST>(std::stoll(token.literal));
 		case TOK_STRING:
@@ -213,6 +217,25 @@ static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& to
 	return std::make_unique<PrototypeAST>(name, returnType, args);
 }
 
+static std::unique_ptr<BaseASTNode> parseStatement(const std::vector<Token>& tokens, int& idx) {
+    if (tokens[idx].type == TOK_IF) {
+        return parseCondition(tokens, idx);
+    } else if (tokens[idx].type == TOK_RETURN) {
+        idx++;
+        return parseReturn(tokens, idx);
+    } else if (tokens[idx].type == TOK_LET) {
+        idx++;
+        return parseLet(tokens, idx);
+    } else {
+        auto expr = parseExpression(tokens, idx);
+        if (!expr) {
+            compilationError(tokens[idx].line, "Expected \"}\" or expression, got " + tokens[idx].literal);
+            return nullptr;
+        }
+        return expr;
+    }
+}
+
 // NOLINTNEXTLINE(misc-no-recursion)
 static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens, int& idx) {
 	std::vector<std::unique_ptr<BaseASTNode>> expressions;
@@ -227,33 +250,15 @@ static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens, in
 	bool shouldPush = true;
 
 	while (tokens[idx].type != TOK_RBRACE) {
-		if (tokens[idx].type == TOK_IF) {
-			auto ifExpr = parseCondition(tokens, idx);
-			if (!ifExpr) return nullptr;
-			if (shouldPush) expressions.push_back(std::move(ifExpr));
-		} else if (tokens[idx].type == TOK_RETURN) {
-			idx++;
-			auto returnResult = parseReturn(tokens, idx);
-			if (!returnResult) {
-				continue;
-			}
-			if (shouldPush) expressions.push_back(std::move(returnResult));
-			shouldPush = false;
-		} else if (tokens[idx].type == TOK_LET) {
-			idx++;
-			auto letResult = parseLet(tokens, idx);
-			if (!letResult) {
-				continue;
-			}
-			if (shouldPush) expressions.push_back(std::move(letResult));
+		if (tokens[idx].type == TOK_RETURN) {
+            ++idx;
+            auto expr = parseReturn(tokens, idx);
+            if(shouldPush) expressions.push_back(std::move(expr));
+            shouldPush = false;
 		} else {
-			auto expr = parseExpression(tokens, idx);
-			if (!expr) {
-				compilationError(tokens[idx].line, "Expected \"}\" or expression, got " + tokens[idx].literal);
-				return nullptr;
-			}
-			if (shouldPush) expressions.push_back(std::move(expr));
-		}
+            auto expr = parseStatement(tokens, idx);
+            if(shouldPush) expressions.push_back(std::move(expr));
+        }
 	}
 
 	++idx;
@@ -299,7 +304,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, i
 	if (bracketedTrueBranch) {
 		trueBranchScope = parseScope(tokens, idx);
 	} else {
-		auto expr = parseExpression(tokens, idx);
+		auto expr = parseStatement(tokens, idx);
 		if (!expr) {
 			compilationError(tokens[idx].line, "Couldn't parse true branch expression");
 			return nullptr;
@@ -319,7 +324,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, i
 		if (bracketedFalseBranch) {
 			falseBranchScope = parseScope(tokens, idx);
 		} else {
-			auto expr = parseExpression(tokens, idx);
+			auto expr = parseStatement(tokens, idx);
 			if (!expr) {
 				return nullptr;
 			}

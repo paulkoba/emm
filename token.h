@@ -38,6 +38,7 @@ enum TokenType {
 	TOK_GREATER_OR_EQUAL = -23,
     TOK_AS = -24,
 	TOK_COMMA = -25,
+    TOK_MODULO = -26,
 
 	// KEYWORDS
 	TOK_IF = -100,
@@ -71,6 +72,8 @@ TokenType getTrivialTokenType(char ch) {
 			return TOK_PRODUCT;
 		case '/':
 			return TOK_DIVISION;
+        case '%':
+            return TOK_MODULO;
 		case '=':
 			return TOK_ASSIGN;
 		case '>':
@@ -172,6 +175,8 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_FALSE";
 		case TOK_MUT:
 			return "TOK_MUT";
+        case TOK_MODULO:
+            return "TOK_MODULO";
 		default:
 			return "UNKNOWN";
 	}
