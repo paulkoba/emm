@@ -84,6 +84,15 @@ class BaseASTNode {
             return nullptr;
         }
     }
+
+    // NOLINTNEXTLINE(misc-no-recursion)
+    virtual llvm::BasicBlock * getReturnBlock() {
+        if(parent) {
+            return parent->getReturnBlock();
+        } else {
+            return nullptr;
+        }
+    }
 };
 
 class SignedIntAST : public BaseASTNode {
@@ -409,6 +418,7 @@ class FunctionAST : public BaseASTNode {
 	std::unique_ptr<ScopeAST> body;
 
     llvm::Value* returnValue = nullptr;
+    llvm::BasicBlock *returnBlock = nullptr;
    public:
 	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
 		: proto(std::move(proto)), body(std::move(body)) {}
@@ -448,6 +458,7 @@ class FunctionAST : public BaseASTNode {
 		}
 
 		llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
+        returnBlock = llvm::BasicBlock::Create(builder.getContext(), "return", function);
 		builder.SetInsertPoint(entryBlock);
 
 		for (auto &arg : function->args()) {
@@ -463,7 +474,10 @@ class FunctionAST : public BaseASTNode {
 			body->codegen(builder);
 		}
 
+        builder.CreateBr(returnBlock);
         // Return value
+        builder.SetInsertPoint(returnBlock);
+
         if (proto->returnType != "void") {
             builder.CreateRet(builder.CreateLoad(returnValue->getType()->getPointerElementType(), returnValue));
         } else {
@@ -487,6 +501,11 @@ class FunctionAST : public BaseASTNode {
     // NOLINTNEXTLINE(misc-no-recursion)
     llvm::Value* getReturnValue() override {
         return returnValue;
+    }
+
+    // NOLINTNEXTLINE(misc-no-recursion)
+    llvm::BasicBlock* getReturnBlock() override {
+        return returnBlock;
     }
 };
 
@@ -606,6 +625,10 @@ class ReturnAST : public BaseASTNode {
 
 			auto returnValue = getReturnValue();
             builder.CreateStore(val, returnValue);
+            builder.CreateBr(getReturnBlock());
+            llvm::BasicBlock *unreachable = llvm::BasicBlock::Create(builder.getContext(), "unreachable", builder.GetInsertBlock()->getParent());
+            builder.SetInsertPoint(unreachable);
+
 
 			return val;
 		}
