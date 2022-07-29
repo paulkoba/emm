@@ -67,8 +67,6 @@ class BaseASTNode {
 		return nullptr;
 	}
 
-	virtual bool isReturnStatement() { return false; }
-
 	// NOLINTNEXTLINE(misc-no-recursion)
 	virtual llvm::Module *getModule() {
 		if (parent) {
@@ -77,6 +75,15 @@ class BaseASTNode {
 			return nullptr;
 		}
 	}
+
+    // NOLINTNEXTLINE(misc-no-recursion)
+    virtual llvm::Value* getReturnValue() {
+        if(parent) {
+            return parent->getReturnValue();
+        } else {
+            return nullptr;
+        }
+    }
 };
 
 class SignedIntAST : public BaseASTNode {
@@ -401,6 +408,7 @@ class FunctionAST : public BaseASTNode {
 	std::unique_ptr<PrototypeAST> proto;
 	std::unique_ptr<ScopeAST> body;
 
+    llvm::Value* returnValue = nullptr;
    public:
 	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
 		: proto(std::move(proto)), body(std::move(body)) {}
@@ -446,9 +454,21 @@ class FunctionAST : public BaseASTNode {
 			body->createVariableInNearestScope((std::string)arg.getName(), (std::string)toStringRef(arg.getType()), &arg);
 		}
 
+        // Allocate space for return value
+        if (proto->returnType != "void") {
+            returnValue = builder.CreateAlloca(getTypeFromString(proto->returnType, builder));
+        }
+
 		if (body) {
 			body->codegen(builder);
 		}
+
+        // Return value
+        if (proto->returnType != "void") {
+            builder.CreateRet(builder.CreateLoad(returnValue->getType()->getPointerElementType(), returnValue));
+        } else {
+            builder.CreateRetVoid();
+        }
 
 		return nullptr;
 	}
@@ -463,6 +483,11 @@ class FunctionAST : public BaseASTNode {
 			body->populateParents();
 		}
 	}
+
+    // NOLINTNEXTLINE(misc-no-recursion)
+    llvm::Value* getReturnValue() override {
+        return returnValue;
+    }
 };
 
 class IfAST : public BaseASTNode {
@@ -521,41 +546,32 @@ class IfAST : public BaseASTNode {
 			return nullptr;
 		}
 
-		bool trueBranchReturn = !trueBranch->statements.empty() && trueBranch->statements.back()->isReturnStatement();
-		bool falseBranchReturn = falseBranch && !falseBranch->statements.empty() && falseBranch->statements.back()->isReturnStatement();
-
 		llvm::Value *conditionBool =
 			builder.CreateICmpNE(conditionValue, llvm::ConstantInt::get(conditionValue->getType(), 0));
 		llvm::Function *function = builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *trueBlock = llvm::BasicBlock::Create(builder.getContext(), "true", function);
 		llvm::BasicBlock *falseBlock = llvm::BasicBlock::Create(builder.getContext(), "false");
 		llvm::BasicBlock *exitBlock = nullptr;
-		if (!falseBranchReturn || !trueBranchReturn) exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
+		exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
 		builder.CreateCondBr(conditionBool, trueBlock, falseBlock);
 		builder.SetInsertPoint(trueBlock);
+
 		if (trueBranch) {
 			trueBranch->codegen(builder);
 		}
-		if (!trueBranchReturn) builder.CreateBr(exitBlock);
+		builder.CreateBr(exitBlock);
 		function->getBasicBlockList().push_back(falseBlock);
 		builder.SetInsertPoint(falseBlock);
 		if (falseBranch) {
 			falseBranch->codegen(builder);
 		}
-		if (!falseBranch || !falseBranchReturn) builder.CreateBr(exitBlock);
+		if (falseBranch) builder.CreateBr(exitBlock);
 
-		if (exitBlock) {
-			function->getBasicBlockList().push_back(exitBlock);
-			builder.SetInsertPoint(exitBlock);
-		}
+        function->getBasicBlockList().push_back(exitBlock);
+        builder.SetInsertPoint(exitBlock);
 
 		return nullptr;
 	}
-
-    bool isReturnStatement() override {
-        return trueBranch && !trueBranch->statements.empty() && trueBranch->statements.back()->isReturnStatement()
-         && falseBranch && !falseBranch->statements.empty() && falseBranch->statements.back()->isReturnStatement();
-    }
 };
 
 class ReturnAST : public BaseASTNode {
@@ -588,7 +604,9 @@ class ReturnAST : public BaseASTNode {
                 return nullptr;
             }
 
-			builder.CreateRet(val);
+			auto returnValue = getReturnValue();
+            builder.CreateStore(val, returnValue);
+
 			return val;
 		}
 		return nullptr;
@@ -600,8 +618,6 @@ class ReturnAST : public BaseASTNode {
 			value->populateParents();
 		}
 	}
-
-	bool isReturnStatement() override { return true; }
 };
 
 class LetAST : public BaseASTNode {

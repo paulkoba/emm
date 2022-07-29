@@ -38,5 +38,5 @@ fn comparisons(n : i64) -> i64 {
 }
 
 fn main() -> i64 {
-    return factorial(120) as i64
+    return fibonacci(20) as i64
 }
