@@ -31,6 +31,8 @@ int main() {
     outputAST << r->generateDOT();
     outputAST << "} \n";
 
+    outputAST.close();
+
     llvm::IRBuilder<> builder(*llvmContext);
 
     r->codegen(builder);

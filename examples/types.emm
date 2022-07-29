@@ -1,12 +1,23 @@
-fn test_store(n : i32) -> i32 {
-    n = 42
-    return n
+fn extend(n : i8) -> i64 {
+    return n as i64
+}
+
+fn shrink(n : i64) -> i8 {
+    return n as i8
+}
+
+fn test_store(n : i64) -> i64 {
+    return 2 * 2
 }
 
 fn factorial(n : i8) -> i8 {
     if n == 0 {
-        return 1
+        return 1 as i8
     } else {
-        return n * factorial(n - 1)
+        return n * factorial(n - 1i8) as i8
     }
+}
+
+fn main() -> i32 {
+    return factorial(5i8) as i32
 }

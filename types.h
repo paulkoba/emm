@@ -15,7 +15,7 @@
 #include "logging.h"
 #include "token.h"
 
-bool isBuiltinIntegerType(llvm::Type* value) { return true; }
+bool isBuiltinIntegerType(llvm::Type* value) { return value->isIntegerTy(); }
 
 void equalizeBitWidth(llvm::IRBuilder<>& builder, llvm::Value *&lhs, llvm::Value *&rhs, bool isSigned = true) {
     auto lhsType = lhs->getType();
@@ -59,7 +59,7 @@ llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* l
         case TOK_ASSIGN:
             return builder.CreateStore(rhs, lhs);
 		default:
-			compilationError("Not yet implemented.");
+			compilationError("buildBuiltinIntegerBinOp: Not yet implemented.");
 			return nullptr;
 	}
 }
@@ -68,7 +68,7 @@ llvm::Value* buildBinOp(llvm::IRBuilder<>& builder, llvm::Value* lhs, llvm::Valu
     if(isBuiltinIntegerType(lhs->getType()) && isBuiltinIntegerType(rhs->getType())) {
         return buildBuiltinIntegerBinOp(builder, lhs, rhs, op);
     } else {
-        compilationError("Not yet implemented.");
+        compilationError("buildBinOp: Not yet implemented.");
         return nullptr;
     }
 }
@@ -83,9 +83,30 @@ llvm::Type* getTypeFromString(const std::string& type, llvm::IRBuilder<>& builde
     } else if (type == "i8") {
         return builder.getInt8Ty();
     } else {
-        compilationError("Not yet implemented.");
+        compilationError("getTypeFromString: Not yet implemented." + type);
         return nullptr;
     }
+}
+
+llvm::Value* createCast(llvm::IRBuilder<>& builder, llvm::Value* value, llvm::Type* type) {
+    if(value->getType() == type) {
+        return value;
+    } else if(value->getType()->isIntegerTy() && type->isIntegerTy()) {
+        if(value->getType()->getIntegerBitWidth() < type->getIntegerBitWidth()) {
+            return builder.CreateSExt(value, type);
+        } else {
+            return builder.CreateTrunc(value, type);
+        }
+    } else if(value->getType()->isFloatingPointTy() && type->isFloatingPointTy()) {
+        return builder.CreateFPExt(value, type);
+    } else {
+        compilationError("createCast: Not yet implemented.");
+        return nullptr;
+    }
+}
+
+std::string getTypeFromLiteral(const std::string& literal) {
+    return literal;
 }
 
 #endif	// EMMC_TYPES_H

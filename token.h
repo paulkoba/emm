@@ -36,7 +36,8 @@ enum TokenType {
 	TOK_SEMICOLON = -21,
 	TOK_LESS_OR_EQUAL = -22,
 	TOK_GREATER_OR_EQUAL = -23,
-	TOK_COMMA = -24,
+    TOK_AS = -24,
+	TOK_COMMA = -25,
 
 	// KEYWORDS
 	TOK_IF = -100,
@@ -54,7 +55,7 @@ enum TokenType {
 TokenType tryMatchKeyword(const std::string& input) {
 	static std::unordered_map<std::string, TokenType> keywords = {
 		{"if", TOK_IF}, {"else", TOK_ELSE}, {"while", TOK_WHILE}, {"return", TOK_RETURN}, {"let", TOK_LET},
-		{"fn", TOK_FN}, {"true", TOK_TRUE}, {"false", TOK_FALSE}, {"mut", TOK_MUT},
+		{"fn", TOK_FN}, {"true", TOK_TRUE}, {"false", TOK_FALSE}, {"mut", TOK_MUT}, {"as", TOK_AS}
 	};
 
 	return keywords.count(input) ? keywords[input] : TOK_NONE;
@@ -149,6 +150,8 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_LESS_OR_EQUAL";
 		case TOK_GREATER_OR_EQUAL:
 			return "TOK_GREATER_OR_EQUAL";
+        case TOK_AS:
+            return "TOK_AS";
 		case TOK_COMMA:
 			return "TOK_COMMA";
 		case TOK_IF:

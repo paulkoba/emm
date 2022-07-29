@@ -41,7 +41,9 @@ class BaseASTNode {
 		return std::to_string((int64_t)this) + " [label=\"BaseASTNode\"]\n";
 	}
 
-	virtual std::string generateDOT() { return ""; }
+	virtual std::string generateDOT() {
+        return "";
+    }
 
 	virtual llvm::Value *codegen(llvm::IRBuilder<> &builder) { return nullptr; }
 
@@ -77,19 +79,26 @@ class BaseASTNode {
 	}
 };
 
-class I64AST : public BaseASTNode {
+class SignedIntAST : public BaseASTNode {
+    int64_t value;
+    int64_t bitWidth;
+public:
+    explicit SignedIntAST(int64_t value, int64_t bitWidth) : value(value), bitWidth(bitWidth) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "i" + std::to_string(bitWidth) + "\"]\n";
+    }
+
+    llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
+        return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(bitWidth, value, true));
+    }
+};
+
+class I64AST : public SignedIntAST {
 	int64_t value;
 
    public:
-	explicit I64AST(int64_t value) : value(value) {}
-
-	[[nodiscard]] std::string generateDOTHeader() const override {
-		return std::to_string((int64_t)this) + " [label=\"I64 " + std::to_string(value) + "\"]\n";
-	}
-
-	llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
-		return llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value, true));
-	}
+    explicit I64AST(int64_t value) : SignedIntAST(value, 64), value(value) {}
 };
 
 class VariableAST : public BaseASTNode {
@@ -128,7 +137,6 @@ class StringAST : public BaseASTNode {
 class BinaryExprAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> lhs, rhs;
 	TokenType op;
-
    public:
 	BinaryExprAST(std::unique_ptr<BaseASTNode> lhs, std::unique_ptr<BaseASTNode> rhs, TokenType op)
 		: lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
@@ -203,6 +211,43 @@ class UnaryOpAST : public BaseASTNode {
 			operand->populateParents();
 		}
 	}
+};
+
+class AsAST : public BaseASTNode {
+    std::unique_ptr<BaseASTNode> lhs;
+    std::string type; // We can not use llvm::Type* here because during AST generation types will not be known yet.
+
+public:
+    AsAST(std::unique_ptr<BaseASTNode> lhs, std::string type) : lhs(std::move(lhs)), type(std::move(type)){}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output;
+        if (lhs) output += lhs->generateDOTHeader();
+        return output + std::to_string((int64_t)this) + " [label=\"AsAST " + type + "\"]\n";
+    }
+
+    std::string generateDOT() override {
+        std::string output;
+        if (lhs) {
+            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)lhs.get()) + "\n";
+            output += lhs->generateDOT();
+        }
+        return output;
+    }
+
+    llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
+        auto lhsValue = lhs->codegen(builder);
+        if (!lhsValue) return nullptr;
+
+        return createCast(builder, lhsValue, getTypeFromString(type, builder));
+    }
+
+    void populateParents() override {
+        if (lhs) {
+            lhs->parent = this;
+            lhs->populateParents();
+        }
+    }
 };
 
 class CallExprAST : public BaseASTNode {

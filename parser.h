@@ -16,6 +16,8 @@ static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& to
 
 static int getTokenPrecedence(TokenType token) {
 	switch (token) {
+        case TOK_AS:
+            return 9;
 		case TOK_EQUALS:
 		case TOK_LESS:
 		case TOK_LESS_OR_EQUAL:
@@ -72,6 +74,9 @@ static std::unique_ptr<BaseASTNode> parsePrimary(const std::vector<Token>& token
 			}
 			return std::make_unique<VariableAST>(token.literal, "");
 		case TOK_INTEGER:
+            if(tokens[idx].type == TOK_IDENTIFIER) {
+                return std::make_unique<AsAST>(std::make_unique<I64AST>(std::stoll(token.literal)), getTypeFromLiteral(tokens[idx++].literal));
+            }
 			return std::make_unique<I64AST>(std::stoll(token.literal));
 		case TOK_STRING:
 			return std::make_unique<StringAST>(token.literal);
@@ -108,7 +113,21 @@ static std::unique_ptr<BaseASTNode> parseUnary(const std::vector<Token>& tokens,
 static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& tokens, int& idx,
 												  std::unique_ptr<BaseASTNode> left, int precedence) {
 	while (true) {
+        if(tokens[idx].type == TOK_AS) {
+            ++idx;
+            if(tokens[idx].type != TOK_IDENTIFIER) {
+                compilationError(tokens[idx].line, "Expected type name, got: " + tokens[idx].literal);
+                return nullptr;
+            }
+            auto type = tokens[idx].literal;
+            ++idx;
+
+            left = std::make_unique<AsAST>(std::move(left), type);
+            continue;
+        }
+
 		auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
+
 		if (binOpPrecedence < precedence) {
 			return left;
 		}
