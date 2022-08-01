@@ -17,6 +17,7 @@
 
 bool isBuiltinIntegerType(llvm::Type* value) { return value->isIntegerTy(); }
 
+// TODO: This will need to be redone to use AST Nodes themselves instead of llvm::Value*
 llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
     if(lhs->getType()->getIntegerBitWidth() != rhs->getType()->getIntegerBitWidth()) {
         compilationError("Cannot perform binary operation on integers of different widths "
@@ -47,6 +48,9 @@ llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* l
             return builder.CreateICmpSGE(lhs, rhs);
         case TOK_MODULO:
             return builder.CreateSRem(lhs, rhs);
+        case TOK_ASSIGN:
+            // TODO: Remove magic
+            return builder.CreateStore(rhs, llvm::dyn_cast<llvm::LoadInst>(lhs)->getPointerOperand());
 		default:
 			compilationError("buildBuiltinIntegerBinOp: Not yet implemented.");
 			return nullptr;

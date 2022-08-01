@@ -94,7 +94,7 @@ class BaseASTNode {
         }
     }
 
-    virtual bool doesReturn() {
+    virtual bool alwaysReturns() {
         return false;
     }
 };
@@ -134,7 +134,7 @@ class VariableAST : public BaseASTNode {
 		auto var = getVariableFromNearestScope(name);
 
 		if (var) {
-			return var->value;
+			return builder.CreateLoad(var->value->getType()->getPointerElementType(), var->value);
 		}
 
 		return nullptr;
@@ -391,7 +391,7 @@ class ScopeAST : public BaseASTNode {
 		llvm::Value *lastValue = nullptr;
 		for (const auto &statement : statements) {
 			lastValue = statement->codegen(builder);
-            if(statement->doesReturn()) break;
+            if(statement->alwaysReturns()) break;
 		}
 		return lastValue;
 	}
@@ -417,9 +417,9 @@ class ScopeAST : public BaseASTNode {
 		return nullptr;
 	}
 
-    bool doesReturn() override {
+    bool alwaysReturns() override {
         for(const auto &statement : statements) {
-            if(statement->doesReturn()) return true;
+            if(statement->alwaysReturns()) return true;
         }
         return false;
     }
@@ -474,7 +474,9 @@ class FunctionAST : public BaseASTNode {
 		builder.SetInsertPoint(entryBlock);
 
 		for (auto &arg : function->args()) {
-			body->createVariableInNearestScope((std::string)arg.getName(), (std::string)toStringRef(arg.getType()), &arg);
+            llvm::Value* stored = builder.CreateAlloca(arg.getType());
+            builder.CreateStore(&arg, stored);
+			body->createVariableInNearestScope((std::string)arg.getName(), (std::string)toStringRef(arg.getType()), stored);
 		}
 
         // Allocate space for return value
@@ -576,8 +578,8 @@ class IfAST : public BaseASTNode {
 			return nullptr;
 		}
 
-        bool trueBranchReturn = trueBranch && trueBranch->doesReturn();
-        bool falseBranchReturn = falseBranch && falseBranch->doesReturn();
+        bool trueBranchReturn = trueBranch && trueBranch->alwaysReturns();
+        bool falseBranchReturn = falseBranch && falseBranch->alwaysReturns();
 
 		llvm::Value *conditionBool =
 			builder.CreateICmpNE(conditionValue, llvm::ConstantInt::get(conditionValue->getType(), 0));
@@ -608,8 +610,73 @@ class IfAST : public BaseASTNode {
 		return nullptr;
 	}
 
-    bool doesReturn() override {
-        return trueBranch->doesReturn() && falseBranch->doesReturn();
+    bool alwaysReturns() override {
+        return trueBranch->alwaysReturns() && falseBranch->alwaysReturns();
+    }
+};
+
+class WhileAST : public BaseASTNode {
+    std::unique_ptr<BaseASTNode> condition;
+    std::unique_ptr<ScopeAST> body;
+   public:
+    WhileAST(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<ScopeAST> body)
+        : condition(std::move(condition)), body(std::move(body)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output = std::to_string((int64_t)this) + " [label=\"WhileAST\"]\n";
+        if (condition) output += condition->generateDOTHeader();
+        if (body) output += body->generateDOTHeader();
+        return output;
+    }
+
+    [[nodiscard]] std::string generateDOT() override {
+        std::string output;
+        if (condition) {
+            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)condition.get()) + "\n";
+            output += condition->generateDOT();
+        }
+        if (body) {
+            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)body.get()) + "\n";
+            output += body->generateDOT();
+        }
+        return output;
+    }
+
+    void populateParents() override {
+        if (condition) {
+            condition->parent = this;
+            condition->populateParents();
+        }
+        if (body) {
+            body->parent = this;
+            body->populateParents();
+        }
+    }
+
+    llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
+        llvm::Function *function = builder.GetInsertBlock()->getParent();
+        llvm::BasicBlock *entryBlock = builder.GetInsertBlock();
+        llvm::BasicBlock *whileConditionBlock = llvm::BasicBlock::Create(builder.getContext(), "whileCondition", function);
+        llvm::BasicBlock *whileBodyBlock = llvm::BasicBlock::Create(builder.getContext(), "whileBody", function);
+        llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
+        builder.CreateBr(whileConditionBlock);
+        builder.SetInsertPoint(whileConditionBlock);
+        llvm::Value *conditionValue = condition->codegen(builder);
+        if (!conditionValue) {
+            return nullptr;
+        }
+        llvm::Value *conditionBool =
+            builder.CreateICmpNE(conditionValue, llvm::ConstantInt::get(conditionValue->getType(), 0));
+
+        builder.CreateCondBr(conditionBool, whileBodyBlock, exitBlock);
+        builder.SetInsertPoint(whileBodyBlock);
+        body->codegen(builder);
+        builder.CreateBr(whileConditionBlock);
+
+        function->getBasicBlockList().push_back(exitBlock);
+        builder.SetInsertPoint(exitBlock);
+
+        return nullptr;
     }
 };
 
@@ -659,7 +726,7 @@ class ReturnAST : public BaseASTNode {
 		}
 	}
 
-    bool doesReturn() override {
+    bool alwaysReturns() override {
         return true;
     }
 };
@@ -687,6 +754,38 @@ class LetAST : public BaseASTNode {
 		}
 		return output;
 	}
+
+    llvm::Value *codegen(llvm::IRBuilder<> &builder) override {
+        llvm::Value* result = value->codegen(builder);
+        llvm::Type* llvmType = nullptr;
+        if(type.empty()) {
+            llvmType = result->getType();
+        } else {
+            llvmType = getTypeFromString(type, builder);
+            type = toStringRef(llvmType);
+        }
+
+        if(!llvmType) {
+            compilationError("Unknown type " + type);
+            return nullptr;
+        }
+
+        // Allocate space on stack for the variable
+        llvm::Value* alloca = builder.CreateAlloca(llvmType);
+        // Store the value in the alloca
+        builder.CreateStore(result, alloca);
+        // Add the alloca to the symbol table
+        createVariableInNearestScope(name, type, alloca);
+
+        return nullptr;
+    }
+
+    void populateParents() override {
+        if(value) {
+            value->parent = this;
+            value->populateParents();
+        }
+    }
 };
 
 class ModuleAST : public BaseASTNode {

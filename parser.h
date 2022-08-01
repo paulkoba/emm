@@ -10,12 +10,15 @@
 #include "token.h"
 
 static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<WhileAST> parseWhile(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx);
 
 static int getTokenPrecedence(TokenType token) {
 	switch (token) {
+        case TOK_ASSIGN:
+            return 1;
         case TOK_AS:
             return 9;
 		case TOK_EQUALS:
@@ -32,8 +35,6 @@ static int getTokenPrecedence(TokenType token) {
 		case TOK_DIVISION:
         case TOK_MODULO:
 			return 30;
-		case TOK_ASSIGN:
-			return 80;
 		default:
 			return -1;
 	}
@@ -220,9 +221,12 @@ static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& to
 	return std::make_unique<PrototypeAST>(name, returnType, args);
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
 static std::unique_ptr<BaseASTNode> parseStatement(const std::vector<Token>& tokens, int& idx) {
     if (tokens[idx].type == TOK_IF) {
         return parseCondition(tokens, idx);
+    } else if(tokens[idx].type == TOK_WHILE) {
+        return parseWhile(tokens, idx);
     } else if (tokens[idx].type == TOK_RETURN) {
         idx++;
         return parseReturn(tokens, idx);
@@ -267,6 +271,46 @@ static std::unique_ptr<ScopeAST> parseScope(const std::vector<Token>& tokens, in
 	++idx;
 
 	return std::make_unique<ScopeAST>(std::move(expressions));
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+static std::unique_ptr<WhileAST> parseWhile(const std::vector<Token>& tokens, int& idx) {
+    ++idx;
+
+    bool bracketedCondition = tokens[idx].type == TOK_LPAREN;
+
+    if (bracketedCondition) {
+        ++idx;
+    }
+
+    std::unique_ptr<BaseASTNode> condition = parseExpression(tokens, idx);
+    if (bracketedCondition) {
+        if (tokens[idx].type != TOK_RPAREN) {
+            compilationError(tokens[idx].line, "Expected \"(\", got: " + tokens[idx].literal);
+            return nullptr;
+        }
+        ++idx;
+    }
+
+    bool bracketedTrueBranch = tokens[idx].type == TOK_LBRACE;
+
+    std::unique_ptr<ScopeAST> whileBody;
+
+    if (bracketedTrueBranch) {
+        whileBody = parseScope(tokens, idx);
+    } else {
+        auto expr = parseStatement(tokens, idx);
+        if (!expr) {
+            compilationError(tokens[idx].line, "Couldn't parse true branch expression");
+            return nullptr;
+        }
+        // TODO: This doesn't work for some reason with initializer-list ?
+        std::vector<std::unique_ptr<BaseASTNode>> scope;
+        scope.push_back(std::move(expr));
+        whileBody = std::make_unique<ScopeAST>(std::move(scope));
+    }
+
+    return std::make_unique<WhileAST>(std::move(condition), std::move(whileBody));
 }
 
 static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& tokens, int& idx) {
