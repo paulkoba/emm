@@ -35,6 +35,7 @@ int main() {
 
     llvm::IRBuilder<> builder(*llvmContext);
 
+    typeRegistry = std::make_unique<TypeRegistry>(builder);
     r->codegen(builder);
 
     r->getModule()->print(llvm::errs(), nullptr);

@@ -11,30 +11,12 @@ fn another_test(n : i64) -> i64 {
     return n * another_test(n - 1)
 }
 
-fn factorial(n : i64) -> i64 {
-    if n == 0 {
-        return 1
-    } else {
-        return n * factorial(n - 1)
-    }
-}
-
 fn weird_sum(n : i64) -> i64 {
     if n == 0 {
         return 0
     } else {
         return n + weird_sum(n - 1)
     }
-}
-
-fn tests(n : i64) -> i64 {
-    if n == 0 {
-        return 1
-    } else {
-        0
-    }
-
-    return 42
 }
 
 fn main() -> i64 {

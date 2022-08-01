@@ -14,91 +14,118 @@
 
 #include "logging.h"
 #include "token.h"
-
-bool isBuiltinIntegerType(llvm::Type* value) { return value->isIntegerTy(); }
+#include "value.h"
+#include "type_registry.h"
 
 // TODO: This will need to be redone to use AST Nodes themselves instead of llvm::Value*
-llvm::Value* buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
-    if(lhs->getType()->getIntegerBitWidth() != rhs->getType()->getIntegerBitWidth()) {
+Value buildBuiltinIntegerBinOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType op) {
+    if(lhs.getValue()->getType()->getIntegerBitWidth() != rhs.getValue()->getType()->getIntegerBitWidth()) {
         compilationError("Cannot perform binary operation on integers of different widths "
-            + std::to_string(lhs->getType()->getIntegerBitWidth()) + " and "
-            + std::to_string(rhs->getType()->getIntegerBitWidth()));
+            + std::to_string(lhs.getValue()->getType()->getIntegerBitWidth()) + " and "
+            + std::to_string(rhs.getValue()->getType()->getIntegerBitWidth()));
     }
+
+    llvm::Value* result = nullptr;
 
 	switch (op) {
 		case TOK_PLUS:
-			return builder.CreateAdd(lhs, rhs);
+            result = builder.CreateAdd(lhs.getValue(), rhs.getValue());
+            return {result, lhs.getType()};
 		case TOK_MINUS:
-			return builder.CreateSub(lhs, rhs);
+            result = builder.CreateSub(lhs.getValue(), rhs.getValue());
+            return {result, lhs.getType()};
 		case TOK_PRODUCT:
-			return builder.CreateMul(lhs, rhs);
+            result = builder.CreateMul(lhs.getValue(), rhs.getValue());
+            return {result, lhs.getType()};
 		case TOK_DIVISION:
-			return builder.CreateSDiv(lhs, rhs);
+            if(rhs.getType()->usesSignedBuiltinOperators()) {
+                result = builder.CreateSDiv(lhs.getValue(), rhs.getValue());
+            } else {
+                result = builder.CreateUDiv(lhs.getValue(), rhs.getValue());
+            }
+
+            return {result, lhs.getType()};
 		case TOK_EQUALS:
-			return builder.CreateICmpEQ(lhs, rhs);
+			return {builder.CreateICmpEQ(lhs.getValue(), rhs.getValue()), getTypeRegistry()->getType("bool")};
         case TOK_NOT_EQUALS:
-            return builder.CreateICmpNE(lhs, rhs);
+            return {builder.CreateICmpNE(lhs.getValue(), rhs.getValue()), getTypeRegistry()->getType("bool")};
         case TOK_LESS:
-            return builder.CreateICmpSLT(lhs, rhs);
+            if(lhs.getType()->usesSignedBuiltinOperators()) {
+                result = builder.CreateICmpSLT(lhs.getValue(), rhs.getValue());
+            } else {
+                result = builder.CreateICmpULT(lhs.getValue(), rhs.getValue());
+            }
+
+            return {result, getTypeRegistry()->getType("bool")};
         case TOK_LESS_OR_EQUAL:
-            return builder.CreateICmpSLE(lhs, rhs);
+            if(lhs.getType()->usesSignedBuiltinOperators()) {
+                result = builder.CreateICmpSLE(lhs.getValue(), rhs.getValue());
+            } else {
+                result = builder.CreateICmpULE(lhs.getValue(), rhs.getValue());
+            }
+
+            return {result, getTypeRegistry()->getType("bool")};
         case TOK_GREATER:
-            return builder.CreateICmpSGT(lhs, rhs);
+            if(lhs.getType()->usesSignedBuiltinOperators()) {
+                result = builder.CreateICmpSGT(lhs.getValue(), rhs.getValue());
+            } else {
+                result = builder.CreateICmpUGT(lhs.getValue(), rhs.getValue());
+            }
+
+            return {result, getTypeRegistry()->getType("bool")};
         case TOK_GREATER_OR_EQUAL:
-            return builder.CreateICmpSGE(lhs, rhs);
+            if(lhs.getType()->usesSignedBuiltinOperators()) {
+                result = builder.CreateICmpSGE(lhs.getValue(), rhs.getValue());
+            } else {
+                result = builder.CreateICmpUGE(lhs.getValue(), rhs.getValue());
+            }
+
+            return {result, getTypeRegistry()->getType("bool")};
         case TOK_MODULO:
-            return builder.CreateSRem(lhs, rhs);
+            if(lhs.getType()->usesSignedBuiltinOperators()) {
+                result = builder.CreateSRem(lhs.getValue(), rhs.getValue());
+            } else {
+                result = builder.CreateURem(lhs.getValue(), rhs.getValue());
+            }
+
+            return {result, lhs.getType()};
         case TOK_ASSIGN:
-            // TODO: Remove magic
-            return builder.CreateStore(rhs, llvm::dyn_cast<llvm::LoadInst>(lhs)->getPointerOperand());
+            // TODO: Verify that I return the right thing here. Also remove dyn_cast magic.
+            result = builder.CreateStore(rhs.getValue(), llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand());
+            return {result, lhs.getType()};
 		default:
 			compilationError("buildBuiltinIntegerBinOp: Not yet implemented.");
-			return nullptr;
+			return {nullptr, nullptr};
 	}
 }
 
-llvm::Value* buildBinOp(llvm::IRBuilder<>& builder, llvm::Value* lhs, llvm::Value* rhs, TokenType op) {
-    if(isBuiltinIntegerType(lhs->getType()) && isBuiltinIntegerType(rhs->getType())) {
+Value buildBinOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType op) {
+    if(lhs.getType()->usesBuiltinOperators() && rhs.getType()->usesBuiltinOperators()) {
         return buildBuiltinIntegerBinOp(builder, lhs, rhs, op);
     } else {
         compilationError("buildBinOp: Not yet implemented.");
-        return nullptr;
+        return {nullptr, nullptr};
     }
 }
 
-llvm::Type* getTypeFromString(const std::string& type, llvm::IRBuilder<>& builder) {
-    if (type == "i64") {
-        return builder.getInt64Ty();
-    } else if (type == "i32") {
-        return builder.getInt32Ty();
-    } else if (type == "i16") {
-        return builder.getInt16Ty();
-    } else if (type == "i8") {
-        return builder.getInt8Ty();
-    } else {
-        compilationError("getTypeFromString: Not yet implemented." + type);
-        return nullptr;
-    }
-}
-
-llvm::Value* createCast(llvm::IRBuilder<>& builder, llvm::Value* value, llvm::Type* type, bool isSigned = true) {
-    if(value->getType() == type) {
+Value createCast(llvm::IRBuilder<>& builder, Value value, Type* type) {
+    if(value.getType() == type) {
         return value;
-    } else if(value->getType()->isIntegerTy() && type->isIntegerTy()) {
-        if(value->getType()->getIntegerBitWidth() < type->getIntegerBitWidth()) {
-            if(isSigned) {
-                return builder.CreateSExt(value, type);
+    } else if(value.getType()->usesBuiltinOperators()) {
+        if(value.getType()->getBase()->getIntegerBitWidth() < type->getBase()->getIntegerBitWidth()) {
+            if(type->usesSignedBuiltinOperators()) {
+                return {builder.CreateSExt(value.getValue(), type->getBase()), type};
             } else {
-                return builder.CreateZExt(value, type);
+                return {builder.CreateZExt(value.getValue(), type->getBase()), type};
             }
         } else {
-            return builder.CreateTrunc(value, type);
+            return {builder.CreateTrunc(value.getValue(), type->getBase()), type};
         }
-    } else if(value->getType()->isFloatingPointTy() && type->isFloatingPointTy()) {
-        return builder.CreateFPExt(value, type);
+    } else if(value.getType()->getBase()->isFloatingPointTy() && type->getBase()->isFloatingPointTy()) {
+        return {builder.CreateFPExt(value.getValue(), type->getBase()), type};
     } else {
         compilationError("createCast: Not yet implemented.");
-        return nullptr;
+        return {nullptr, nullptr};
     }
 }
 
