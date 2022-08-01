@@ -93,6 +93,10 @@ class BaseASTNode {
             return nullptr;
         }
     }
+
+    virtual bool doesReturn() {
+        return false;
+    }
 };
 
 class SignedIntAST : public BaseASTNode {
@@ -387,6 +391,7 @@ class ScopeAST : public BaseASTNode {
 		llvm::Value *lastValue = nullptr;
 		for (const auto &statement : statements) {
 			lastValue = statement->codegen(builder);
+            if(statement->doesReturn()) break;
 		}
 		return lastValue;
 	}
@@ -411,6 +416,13 @@ class ScopeAST : public BaseASTNode {
 
 		return nullptr;
 	}
+
+    bool doesReturn() override {
+        for(const auto &statement : statements) {
+            if(statement->doesReturn()) return true;
+        }
+        return false;
+    }
 };
 
 class FunctionAST : public BaseASTNode {
@@ -474,7 +486,6 @@ class FunctionAST : public BaseASTNode {
 			body->codegen(builder);
 		}
 
-        builder.CreateBr(returnBlock);
         // Return value
         builder.SetInsertPoint(returnBlock);
 
@@ -565,32 +576,41 @@ class IfAST : public BaseASTNode {
 			return nullptr;
 		}
 
+        bool trueBranchReturn = trueBranch && trueBranch->doesReturn();
+        bool falseBranchReturn = falseBranch && falseBranch->doesReturn();
+
 		llvm::Value *conditionBool =
 			builder.CreateICmpNE(conditionValue, llvm::ConstantInt::get(conditionValue->getType(), 0));
 		llvm::Function *function = builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *trueBlock = llvm::BasicBlock::Create(builder.getContext(), "true", function);
 		llvm::BasicBlock *falseBlock = llvm::BasicBlock::Create(builder.getContext(), "false");
 		llvm::BasicBlock *exitBlock = nullptr;
-		exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
+        if(!trueBranchReturn || !falseBranchReturn) exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
 		builder.CreateCondBr(conditionBool, trueBlock, falseBlock);
 		builder.SetInsertPoint(trueBlock);
 
 		if (trueBranch) {
 			trueBranch->codegen(builder);
 		}
-		builder.CreateBr(exitBlock);
+		if(!trueBranchReturn) builder.CreateBr(exitBlock);
 		function->getBasicBlockList().push_back(falseBlock);
 		builder.SetInsertPoint(falseBlock);
 		if (falseBranch) {
 			falseBranch->codegen(builder);
 		}
-		if (falseBranch) builder.CreateBr(exitBlock);
+		if(falseBranch && !falseBranchReturn) builder.CreateBr(exitBlock);
 
-        function->getBasicBlockList().push_back(exitBlock);
-        builder.SetInsertPoint(exitBlock);
+        if(!trueBranchReturn || !falseBranchReturn) {
+            function->getBasicBlockList().push_back(exitBlock);
+            builder.SetInsertPoint(exitBlock);
+        }
 
 		return nullptr;
 	}
+
+    bool doesReturn() override {
+        return trueBranch->doesReturn() && falseBranch->doesReturn();
+    }
 };
 
 class ReturnAST : public BaseASTNode {
@@ -626,9 +646,6 @@ class ReturnAST : public BaseASTNode {
 			auto returnValue = getReturnValue();
             builder.CreateStore(val, returnValue);
             builder.CreateBr(getReturnBlock());
-            llvm::BasicBlock *unreachable = llvm::BasicBlock::Create(builder.getContext(), "unreachable", builder.GetInsertBlock()->getParent());
-            builder.SetInsertPoint(unreachable);
-
 
 			return val;
 		}
@@ -641,6 +658,10 @@ class ReturnAST : public BaseASTNode {
 			value->populateParents();
 		}
 	}
+
+    bool doesReturn() override {
+        return true;
+    }
 };
 
 class LetAST : public BaseASTNode {
