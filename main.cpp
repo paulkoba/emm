@@ -15,7 +15,7 @@
 #include "compilation.h"
 
 int main() {
-    std::ifstream input("../examples/variables.emm");
+    std::ifstream input("../examples/more_types.emm");
     std::stringstream buffer;
     buffer << input.rdbuf();
     auto tmp = lex(buffer.str());

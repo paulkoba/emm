@@ -41,6 +41,7 @@ enum TokenType {
     TOK_MODULO = -26,
     TOK_NOT_EQUALS = -27,
     TOK_NOT = -28,
+    TOK_FLOATING_POINT = -29,
 
 	// KEYWORDS
 	TOK_IF = -100,
@@ -185,6 +186,8 @@ std::string tokenTypeToString(TokenType type) {
             return "TOK_NOT_EQUALS";
         case TOK_NOT:
             return "TOK_NOT";
+        case TOK_FLOATING_POINT:
+            return "TOK_FLOATING_POINT";
 		default:
 			return "UNKNOWN";
 	}

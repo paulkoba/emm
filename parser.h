@@ -86,6 +86,16 @@ static std::unique_ptr<BaseASTNode> parsePrimary(const std::vector<Token>& token
                 }
             }
 			return std::make_unique<I64AST>(std::stoll(token.literal));
+        case TOK_FLOATING_POINT:
+            if(tokens[idx].type == TOK_IDENTIFIER) {
+                const auto& type = tokens[idx].literal;
+                auto r = fromLiteral(token.literal, type);
+                if(r) {
+                    idx++;
+                    return std::move(r);
+                }
+            }
+            return std::make_unique<F64AST>(std::stod(token.literal));
 		case TOK_STRING:
 			return std::make_unique<StringAST>(token.literal);
 		case TOK_LPAREN: {
@@ -111,7 +121,7 @@ static std::unique_ptr<BaseASTNode> parseUnary(const std::vector<Token>& tokens,
 		++idx;
 		auto expr = parsePrimary(tokens, idx);
 		if (!expr) return expr;
-		return std::make_unique<UnaryOpAST>(std::move(expr), token.literal);
+		return std::make_unique<UnaryOpAST>(std::move(expr), token.type);
 	}
 
 	return parsePrimary(tokens, idx);

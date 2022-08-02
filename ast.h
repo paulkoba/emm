@@ -19,35 +19,8 @@
 #include "types.h"
 #include "type_registry.h"
 
-class Variable {
-   public:
-	std::string name;
-	Value value;
-
-   public:
-	Variable(std::string name, Value value)
-		: name(std::move(name)), value(value) {}
-
-	Variable() = default;
-};
-
-class Function {
-    llvm::Function* function = nullptr;
-    Type* returnType = nullptr;
-    std::vector<Variable> parameters;
-public:
-    Function(llvm::Function* function, Type* returnType) : function(function), returnType(returnType) {}
-    Function() = default;
-
-    [[nodiscard]] llvm::Function* getFunction() const { return function; }
-    [[nodiscard]] Type* getReturnType() const { return returnType; }
-};
-
-std::unordered_map<llvm::Function*, std::unique_ptr<Function>> functionMap;
-
-static Function* getFunction(llvm::Function* function) {
-    return functionMap[function].get();
-}
+#include "function.h"
+#include "variable.h"
 
 class BaseASTNode {
    public:
@@ -116,14 +89,6 @@ class BaseASTNode {
     virtual bool alwaysReturns() {
         return false;
     }
-
-    virtual void printVariables() {
-        std::cerr << "{ ";
-        if(parent) {
-            parent->printVariables();
-        }
-        std::cerr << " }\n";
-    }
 };
 
 class SignedIntAST : public BaseASTNode {
@@ -146,6 +111,43 @@ class I64AST : public SignedIntAST {
     explicit I64AST(int64_t value) : SignedIntAST(value, 64) {}
 };
 
+class UnsignedIntAST : public BaseASTNode {
+    uint64_t value;
+    uint64_t bitWidth;
+
+public:
+    explicit UnsignedIntAST(uint64_t value, uint64_t bitWidth) : value(value), bitWidth(bitWidth) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "u" + std::to_string(bitWidth) + "\"]\n";
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        return {llvm::ConstantInt::get(builder.getContext(), llvm::APInt(bitWidth, value, false)), getTypeRegistry()->getType("u" + std::to_string(bitWidth))};
+    }
+};
+
+class FloatingPointAST : public BaseASTNode {
+    double value;
+    int64_t bitWidth;
+
+public:
+    explicit FloatingPointAST(double value, int64_t bitWidth) : value(value), bitWidth(bitWidth) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "f" + std::to_string(bitWidth) + "\"]\n";
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        return {llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(value)), getTypeRegistry()->getType("f" + std::to_string(bitWidth))};
+    }
+};
+
+class F64AST : public FloatingPointAST {
+   public:
+    explicit F64AST(double value) : FloatingPointAST(value, 64) {}
+};
+
 class VariableAST : public BaseASTNode {
 	std::string name;
     std::string type;
@@ -163,7 +165,6 @@ class VariableAST : public BaseASTNode {
             auto llvmType = var->value.getType();
             if(!llvmType) {
                 compilationError("Variable " + name + " has no type");
-                printVariables();
                 return {};
             }
 
@@ -218,8 +219,7 @@ class BinaryExprAST : public BaseASTNode {
 		auto rhsValue = rhs->codegen(builder);
 		if (!lhsValue || !rhsValue) return {};
 
-		// TODO: Properly handle different types
-		auto r = buildBinOp(builder, lhsValue, rhsValue, op);
+		auto r = buildBinaryOp(builder, lhsValue, rhsValue, op);
 		return r;
 	}
 
@@ -237,15 +237,15 @@ class BinaryExprAST : public BaseASTNode {
 
 class UnaryOpAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> operand;
-	std::string op;
+	TokenType op;
 
    public:
-	UnaryOpAST(std::unique_ptr<BaseASTNode> operand, std::string op) : operand(std::move(operand)), op(std::move(op)) {}
+	UnaryOpAST(std::unique_ptr<BaseASTNode> operand, TokenType op) : operand(std::move(operand)), op(op) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
 		std::string output;
 		if (operand) output += operand->generateDOTHeader();
-		return output + std::to_string((int64_t)this) + " [label=\"UnaryOpAST" + op + "\"]\n";
+		return output + std::to_string((int64_t)this) + " [label=\"UnaryOpAST " + tokenTypeToString(op) + "\"]\n";
 	}
 
 	std::string generateDOT() override {
@@ -263,6 +263,14 @@ class UnaryOpAST : public BaseASTNode {
 			operand->populateParents();
 		}
 	}
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        auto operandValue = operand->codegen(builder);
+        if (!operandValue) return {};
+
+        auto r = buildUnaryOp(builder, operandValue, op);
+        return r;
+    }
 };
 
 class AsAST : public BaseASTNode {
@@ -337,7 +345,7 @@ class CallExprAST : public BaseASTNode {
 	Value codegen(llvm::IRBuilder<> &builder) override {
 		auto func = getModule()->getFunction(name);
 		if (!func) {
-			std::cerr << "Error: Function " << name << " not found" << std::endl;
+            compilationError("Function " + name + " not found");
 			return {};
 		}
 
@@ -459,17 +467,6 @@ class ScopeAST : public BaseASTNode {
             if(statement->alwaysReturns()) return true;
         }
         return false;
-    }
-
-    void printVariables() override {
-        std::cerr << "{ ";
-        for(const auto &variable : variables) {
-            std::cerr << variable.second.name << ": " << variable.second.value.getType()->getName() << " : " << variable.second.value.getType()->getBase() << ", ";
-        }
-        std::cerr << "}\n";
-        if(parent) {
-            parent->printVariables();
-        }
     }
 };
 
@@ -704,7 +701,6 @@ class WhileAST : public BaseASTNode {
 
     Value codegen(llvm::IRBuilder<> &builder) override {
         llvm::Function *function = builder.GetInsertBlock()->getParent();
-        llvm::BasicBlock *entryBlock = builder.GetInsertBlock();
         llvm::BasicBlock *whileConditionBlock = llvm::BasicBlock::Create(builder.getContext(), "whileCondition", function);
         llvm::BasicBlock *whileBodyBlock = llvm::BasicBlock::Create(builder.getContext(), "whileBody", function);
         llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
@@ -825,7 +821,6 @@ class LetAST : public BaseASTNode {
         // Store the value in the alloca
         builder.CreateStore(result.getValue(), alloca);
         // Add the alloca to the symbol table
-        std::cerr << "Type: " << type << std::endl;
         createVariableInNearestScope(Variable{name, {alloca, getTypeRegistry()->getType(type)}});
 
         return {};
@@ -883,7 +878,7 @@ class ModuleAST : public BaseASTNode {
 };
 
 std::unique_ptr<BaseASTNode> fromLiteral(const std::string& integer, const std::string& type) {
-    // This will need to support custom structs and as a result will need to be severely modified.
+    // TODO: There is definitely a better way to do this
     if(type == "i8") {
         return std::make_unique<SignedIntAST>(std::stoi(integer), 8);
     } else if(type == "i16") {
@@ -892,8 +887,20 @@ std::unique_ptr<BaseASTNode> fromLiteral(const std::string& integer, const std::
         return std::make_unique<SignedIntAST>(std::stoi(integer), 32);
     } else if(type == "i64") {
         return std::make_unique<SignedIntAST>(std::stoi(integer), 64);
+    } else if(type == "u8") {
+        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 8);
+    } else if(type == "u16") {
+        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 16);
+    } else if(type == "u32") {
+        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 32);
+    } else if(type == "u64") {
+        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 64);
+    } else if(type == "f32") {
+        return std::make_unique<FloatingPointAST>(std::stod(integer), 32);
+    } else if(type == "f64") {
+        return std::make_unique<FloatingPointAST>(std::stod(integer), 64);
     } else {
-        compilationError("Unknown literal suffix");
+        compilationError("Unknown literal " + type);
         return nullptr;
     }
 }

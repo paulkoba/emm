@@ -1,0 +1,28 @@
+fn square_root(x : f64) -> f64 {
+    let left = 0.0
+    let right = x
+
+    while (right - left > 0.001) {
+        let mid = (left + right) / 2.0
+        if mid * mid > x {
+            right = mid
+        } else {
+            left = mid
+        }
+    }
+    return left
+}
+
+fn unsigned_test(x : u64) -> u64 {
+    let y = x
+    let z = 0u64
+    while y > 0u64 {
+        z = z + y % 10u64
+        y = y / 10u64
+    }
+    return z
+}
+
+fn main() -> i64 {
+    return square_root(17.) as i64
+}
