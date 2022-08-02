@@ -8,17 +8,17 @@
 #include "type.h"
 
 class Value {
-    llvm::Value* value = nullptr;
-    Type* type = nullptr;
+	llvm::Value* value = nullptr;
+	Type* type = nullptr;
 
-public:
-    Value(llvm::Value* value, Type* type) : value(value), type(type) {}
-    Value() = default;
+   public:
+	Value(llvm::Value* value, Type* type) : value(value), type(type) {}
+	Value() = default;
 
-    [[nodiscard]] bool operator!() const { return value == nullptr; }
+	[[nodiscard]] bool operator!() const { return value == nullptr; }
 
-    [[nodiscard]] llvm::Value* getValue() const { return value; }
-    [[nodiscard]] Type* getType() const { return type; }
+	[[nodiscard]] llvm::Value* getValue() const { return value; }
+	[[nodiscard]] Type* getType() const { return type; }
 };
 
-#endif //EMMC_VALUE_H
+#endif	// EMMC_VALUE_H

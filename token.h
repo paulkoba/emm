@@ -36,12 +36,12 @@ enum TokenType {
 	TOK_SEMICOLON = -21,
 	TOK_LESS_OR_EQUAL = -22,
 	TOK_GREATER_OR_EQUAL = -23,
-    TOK_AS = -24,
+	TOK_AS = -24,
 	TOK_COMMA = -25,
-    TOK_MODULO = -26,
-    TOK_NOT_EQUALS = -27,
-    TOK_NOT = -28,
-    TOK_FLOATING_POINT = -29,
+	TOK_MODULO = -26,
+	TOK_NOT_EQUALS = -27,
+	TOK_NOT = -28,
+	TOK_FLOATING_POINT = -29,
 
 	// KEYWORDS
 	TOK_IF = -100,
@@ -59,8 +59,7 @@ enum TokenType {
 TokenType tryMatchKeyword(const std::string& input) {
 	static std::unordered_map<std::string, TokenType> keywords = {
 		{"if", TOK_IF}, {"else", TOK_ELSE}, {"while", TOK_WHILE}, {"return", TOK_RETURN}, {"let", TOK_LET},
-		{"fn", TOK_FN}, {"true", TOK_TRUE}, {"false", TOK_FALSE}, {"mut", TOK_MUT}, {"as", TOK_AS}
-	};
+		{"fn", TOK_FN}, {"true", TOK_TRUE}, {"false", TOK_FALSE}, {"mut", TOK_MUT},		  {"as", TOK_AS}};
 
 	return keywords.count(input) ? keywords[input] : TOK_NONE;
 }
@@ -75,8 +74,8 @@ TokenType getTrivialTokenType(char ch) {
 			return TOK_PRODUCT;
 		case '/':
 			return TOK_DIVISION;
-        case '%':
-            return TOK_MODULO;
+		case '%':
+			return TOK_MODULO;
 		case '=':
 			return TOK_ASSIGN;
 		case '>':
@@ -101,8 +100,8 @@ TokenType getTrivialTokenType(char ch) {
 			return TOK_COLON;
 		case ',':
 			return TOK_COMMA;
-        case '!':
-            return TOK_NOT;
+		case '!':
+			return TOK_NOT;
 		default:
 			return TOK_NONE;
 	}
@@ -158,8 +157,8 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_LESS_OR_EQUAL";
 		case TOK_GREATER_OR_EQUAL:
 			return "TOK_GREATER_OR_EQUAL";
-        case TOK_AS:
-            return "TOK_AS";
+		case TOK_AS:
+			return "TOK_AS";
 		case TOK_COMMA:
 			return "TOK_COMMA";
 		case TOK_IF:
@@ -180,14 +179,14 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_FALSE";
 		case TOK_MUT:
 			return "TOK_MUT";
-        case TOK_MODULO:
-            return "TOK_MODULO";
-        case TOK_NOT_EQUALS:
-            return "TOK_NOT_EQUALS";
-        case TOK_NOT:
-            return "TOK_NOT";
-        case TOK_FLOATING_POINT:
-            return "TOK_FLOATING_POINT";
+		case TOK_MODULO:
+			return "TOK_MODULO";
+		case TOK_NOT_EQUALS:
+			return "TOK_NOT_EQUALS";
+		case TOK_NOT:
+			return "TOK_NOT";
+		case TOK_FLOATING_POINT:
+			return "TOK_FLOATING_POINT";
 		default:
 			return "UNKNOWN";
 	}

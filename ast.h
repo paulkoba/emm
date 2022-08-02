@@ -15,11 +15,10 @@
 #include <utility>
 #include <vector>
 
-#include "token.h"
-#include "types.h"
-#include "type_registry.h"
-
 #include "function.h"
+#include "token.h"
+#include "type_registry.h"
+#include "types.h"
 #include "variable.h"
 
 class BaseASTNode {
@@ -33,9 +32,7 @@ class BaseASTNode {
 		return std::to_string((int64_t)this) + " [label=\"BaseASTNode\"]\n";
 	}
 
-	virtual std::string generateDOT() {
-        return "";
-    }
+	virtual std::string generateDOT() { return ""; }
 
 	virtual Value codegen(llvm::IRBuilder<> &builder) { return {}; }
 
@@ -68,89 +65,95 @@ class BaseASTNode {
 		}
 	}
 
-    // NOLINTNEXTLINE(misc-no-recursion)
-    virtual llvm::Value* getReturnValue() {
-        if(parent) {
-            return parent->getReturnValue();
-        } else {
-            return nullptr;
-        }
-    }
+	// NOLINTNEXTLINE(misc-no-recursion)
+	virtual llvm::Value *getReturnValue() {
+		if (parent) {
+			return parent->getReturnValue();
+		} else {
+			return nullptr;
+		}
+	}
 
-    // NOLINTNEXTLINE(misc-no-recursion)
-    virtual llvm::BasicBlock * getReturnBlock() {
-        if(parent) {
-            return parent->getReturnBlock();
-        } else {
-            return nullptr;
-        }
-    }
+	// NOLINTNEXTLINE(misc-no-recursion)
+	virtual llvm::BasicBlock *getReturnBlock() {
+		if (parent) {
+			return parent->getReturnBlock();
+		} else {
+			return nullptr;
+		}
+	}
 
-    virtual bool alwaysReturns() {
-        return false;
-    }
+	virtual bool alwaysReturns() { return false; }
 };
 
 class SignedIntAST : public BaseASTNode {
-    int64_t value;
-    int64_t bitWidth;
-public:
-    explicit SignedIntAST(int64_t value, int64_t bitWidth) : value(value), bitWidth(bitWidth) {}
+	int64_t value;
+	int64_t bitWidth;
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "i" + std::to_string(bitWidth) + "\"]\n";
-    }
+   public:
+	explicit SignedIntAST(int64_t value, int64_t bitWidth) : value(value), bitWidth(bitWidth) {}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        return {llvm::ConstantInt::get(builder.getContext(), llvm::APInt(bitWidth, value, true)), getTypeRegistry()->getType("i" + std::to_string(bitWidth))};
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "i" + std::to_string(bitWidth) +
+			   "\"]\n";
+	}
+
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		return {llvm::ConstantInt::get(builder.getContext(), llvm::APInt(bitWidth, value, true)),
+				getTypeRegistry()->getType("i" + std::to_string(bitWidth))};
+	}
 };
 
 class I64AST : public SignedIntAST {
    public:
-    explicit I64AST(int64_t value) : SignedIntAST(value, 64) {}
+	explicit I64AST(int64_t value) : SignedIntAST(value, 64) {}
 };
 
 class UnsignedIntAST : public BaseASTNode {
-    uint64_t value;
-    uint64_t bitWidth;
+	uint64_t value;
+	uint64_t bitWidth;
 
-public:
-    explicit UnsignedIntAST(uint64_t value, uint64_t bitWidth) : value(value), bitWidth(bitWidth) {}
+   public:
+	explicit UnsignedIntAST(uint64_t value, uint64_t bitWidth) : value(value), bitWidth(bitWidth) {}
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "u" + std::to_string(bitWidth) + "\"]\n";
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "u" + std::to_string(bitWidth) +
+			   "\"]\n";
+	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        return {llvm::ConstantInt::get(builder.getContext(), llvm::APInt(bitWidth, value, false)), getTypeRegistry()->getType("u" + std::to_string(bitWidth))};
-    }
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		return {llvm::ConstantInt::get(builder.getContext(), llvm::APInt(bitWidth, value, false)),
+				getTypeRegistry()->getType("u" + std::to_string(bitWidth))};
+	}
 };
 
 class FloatingPointAST : public BaseASTNode {
-    double value;
-    int64_t bitWidth;
+	double value;
+	int64_t bitWidth;
 
-public:
-    explicit FloatingPointAST(double value, int64_t bitWidth) : value(value), bitWidth(bitWidth) {}
+   public:
+	explicit FloatingPointAST(double value, int64_t bitWidth) : value(value), bitWidth(bitWidth) {}
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "f" + std::to_string(bitWidth) + "\"]\n";
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		return std::to_string((int64_t)this) + " [label=\"" + std::to_string(value) + "f" + std::to_string(bitWidth) +
+			   "\"]\n";
+	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        return {llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(value)), getTypeRegistry()->getType("f" + std::to_string(bitWidth))};
-    }
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		return {llvm::ConstantFP::get(builder.getContext(), llvm::APFloat(value)),
+				getTypeRegistry()->getType("f" + std::to_string(bitWidth))};
+	}
 };
 
 class F64AST : public FloatingPointAST {
    public:
-    explicit F64AST(double value) : FloatingPointAST(value, 64) {}
+	explicit F64AST(double value) : FloatingPointAST(value, 64) {}
 };
 
 class VariableAST : public BaseASTNode {
 	std::string name;
-    std::string type;
+	std::string type;
+
    public:
 	VariableAST(std::string name, std::string type) : name(std::move(name)), type(std::move(type)) {}
 
@@ -162,16 +165,16 @@ class VariableAST : public BaseASTNode {
 		auto var = getVariableFromNearestScope(name);
 
 		if (var) {
-            auto llvmType = var->value.getType();
-            if(!llvmType) {
-                compilationError("Variable " + name + " has no type");
-                return {};
-            }
+			auto llvmType = var->value.getType();
+			if (!llvmType) {
+				compilationError("Variable " + name + " has no type");
+				return {};
+			}
 
 			return {builder.CreateLoad(llvmType->getBase(), var->value.getValue()), var->value.getType()};
 		}
 
-        compilationError("Variable " + name + " not found");
+		compilationError("Variable " + name + " not found");
 		return {};
 	}
 };
@@ -190,6 +193,7 @@ class StringAST : public BaseASTNode {
 class BinaryExprAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> lhs, rhs;
 	TokenType op;
+
    public:
 	BinaryExprAST(std::unique_ptr<BaseASTNode> lhs, std::unique_ptr<BaseASTNode> rhs, TokenType op)
 		: lhs(std::move(lhs)), rhs(std::move(rhs)), op(op) {}
@@ -264,50 +268,50 @@ class UnaryOpAST : public BaseASTNode {
 		}
 	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        auto operandValue = operand->codegen(builder);
-        if (!operandValue) return {};
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		auto operandValue = operand->codegen(builder);
+		if (!operandValue) return {};
 
-        auto r = buildUnaryOp(builder, operandValue, op);
-        return r;
-    }
+		auto r = buildUnaryOp(builder, operandValue, op);
+		return r;
+	}
 };
 
 class AsAST : public BaseASTNode {
-    std::unique_ptr<BaseASTNode> lhs;
-    std::string type; // We can not use Type* here because during AST generation real types will not be known yet.
+	std::unique_ptr<BaseASTNode> lhs;
+	std::string type;  // We can not use Type* here because during AST generation real types will not be known yet.
 
-public:
-    AsAST(std::unique_ptr<BaseASTNode> lhs, std::string type) : lhs(std::move(lhs)), type(std::move(type)){}
+   public:
+	AsAST(std::unique_ptr<BaseASTNode> lhs, std::string type) : lhs(std::move(lhs)), type(std::move(type)) {}
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        std::string output;
-        if (lhs) output += lhs->generateDOTHeader();
-        return output + std::to_string((int64_t)this) + " [label=\"AsAST " + type + "\"]\n";
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		std::string output;
+		if (lhs) output += lhs->generateDOTHeader();
+		return output + std::to_string((int64_t)this) + " [label=\"AsAST " + type + "\"]\n";
+	}
 
-    std::string generateDOT() override {
-        std::string output;
-        if (lhs) {
-            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)lhs.get()) + "\n";
-            output += lhs->generateDOT();
-        }
-        return output;
-    }
+	std::string generateDOT() override {
+		std::string output;
+		if (lhs) {
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)lhs.get()) + "\n";
+			output += lhs->generateDOT();
+		}
+		return output;
+	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        auto lhsValue = lhs->codegen(builder);
-        if (!lhsValue) return {};
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		auto lhsValue = lhs->codegen(builder);
+		if (!lhsValue) return {};
 
-        return createCast(builder, lhsValue, typeRegistry->getType(type));
-    }
+		return createCast(builder, lhsValue, typeRegistry->getType(type));
+	}
 
-    void populateParents() override {
-        if (lhs) {
-            lhs->parent = this;
-            lhs->populateParents();
-        }
-    }
+	void populateParents() override {
+		if (lhs) {
+			lhs->parent = this;
+			lhs->populateParents();
+		}
+	}
 };
 
 class CallExprAST : public BaseASTNode {
@@ -345,7 +349,7 @@ class CallExprAST : public BaseASTNode {
 	Value codegen(llvm::IRBuilder<> &builder) override {
 		auto func = getModule()->getFunction(name);
 		if (!func) {
-            compilationError("Function " + name + " not found");
+			compilationError("Function " + name + " not found");
 			return {};
 		}
 
@@ -381,14 +385,13 @@ class PrototypeAST : public BaseASTNode {
 
 	Value codegen(llvm::IRBuilder<> &builder) override {
 		std::vector<llvm::Type *> argTypes;
-        auto registry = getTypeRegistry();
-        auto rtype = registry->getType(returnType);
+		auto registry = getTypeRegistry();
+		auto rtype = registry->getType(returnType);
 		for (const auto &arg : args) {
 			argTypes.push_back(registry->getType(arg.second)->getBase());
 		}
 
-		llvm::FunctionType *functionType =
-			llvm::FunctionType::get(rtype->getBase(), argTypes, false);
+		llvm::FunctionType *functionType = llvm::FunctionType::get(rtype->getBase(), argTypes, false);
 		llvm::Function *function =
 			llvm::Function::Create(functionType, llvm::Function::ExternalLinkage, name, getModule());
 
@@ -398,7 +401,7 @@ class PrototypeAST : public BaseASTNode {
 			i++;
 		}
 
-        functionMap[function] = std::make_unique<Function>(function, rtype);
+		functionMap[function] = std::make_unique<Function>(function, rtype);
 
 		return {function, nullptr};
 	}
@@ -432,11 +435,11 @@ class ScopeAST : public BaseASTNode {
 		return output;
 	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
+	Value codegen(llvm::IRBuilder<> &builder) override {
 		Value lastValue;
 		for (const auto &statement : statements) {
 			lastValue = statement->codegen(builder);
-            if(statement->alwaysReturns()) break;
+			if (statement->alwaysReturns()) break;
 		}
 		return lastValue;
 	}
@@ -448,9 +451,7 @@ class ScopeAST : public BaseASTNode {
 		}
 	}
 
-	void createVariableInNearestScope(Variable variable) override {
-		variables[variable.name] = variable;
-	}
+	void createVariableInNearestScope(Variable variable) override { variables[variable.name] = variable; }
 
 	Variable *getVariableFromNearestScope(const std::string &name) override {
 		if (variables.find(name) != variables.end()) return &variables[name];
@@ -462,20 +463,21 @@ class ScopeAST : public BaseASTNode {
 		return nullptr;
 	}
 
-    bool alwaysReturns() override {
-        for(const auto &statement : statements) {
-            if(statement->alwaysReturns()) return true;
-        }
-        return false;
-    }
+	bool alwaysReturns() override {
+		for (const auto &statement : statements) {
+			if (statement->alwaysReturns()) return true;
+		}
+		return false;
+	}
 };
 
 class FunctionAST : public BaseASTNode {
 	std::unique_ptr<PrototypeAST> proto;
 	std::unique_ptr<ScopeAST> body;
 
-    Value returnValue;
-    llvm::BasicBlock *returnBlock = nullptr;
+	Value returnValue;
+	llvm::BasicBlock *returnBlock = nullptr;
+
    public:
 	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
 		: proto(std::move(proto)), body(std::move(body)) {}
@@ -515,35 +517,37 @@ class FunctionAST : public BaseASTNode {
 		}
 
 		llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
-        returnBlock = llvm::BasicBlock::Create(builder.getContext(), "return", function);
+		returnBlock = llvm::BasicBlock::Create(builder.getContext(), "return", function);
 		builder.SetInsertPoint(entryBlock);
 
-        std::size_t idx = 0;
+		std::size_t idx = 0;
 		for (auto &arg : function->args()) {
-            llvm::Value* stored = builder.CreateAlloca(arg.getType());
-            builder.CreateStore(&arg, stored);
-			body->createVariableInNearestScope(Variable{proto->args[idx].first, Value{stored, getTypeRegistry()->getType(proto->args[idx].second)}});
+			llvm::Value *stored = builder.CreateAlloca(arg.getType());
+			builder.CreateStore(&arg, stored);
+			body->createVariableInNearestScope(
+				Variable{proto->args[idx].first, Value{stored, getTypeRegistry()->getType(proto->args[idx].second)}});
 
-            ++idx;
+			++idx;
 		}
 
-        // Allocate space for return value
-        if (proto->returnType != "void") {
-            returnValue = {builder.CreateAlloca(getTypeRegistry()->getType(proto->returnType)->getBase()), getTypeRegistry()->getType(proto->returnType)};
-        }
+		// Allocate space for return value
+		if (proto->returnType != "void") {
+			returnValue = {builder.CreateAlloca(getTypeRegistry()->getType(proto->returnType)->getBase()),
+						   getTypeRegistry()->getType(proto->returnType)};
+		}
 
 		if (body) {
 			body->codegen(builder);
 		}
 
-        // Return value
-        builder.SetInsertPoint(returnBlock);
+		// Return value
+		builder.SetInsertPoint(returnBlock);
 
-        if (proto->returnType != "void") {
-            builder.CreateRet(builder.CreateLoad(returnValue.getType()->getBase(), returnValue.getValue()));
-        } else {
-            builder.CreateRetVoid();
-        }
+		if (proto->returnType != "void") {
+			builder.CreateRet(builder.CreateLoad(returnValue.getType()->getBase(), returnValue.getValue()));
+		} else {
+			builder.CreateRetVoid();
+		}
 
 		return {};
 	}
@@ -559,21 +563,18 @@ class FunctionAST : public BaseASTNode {
 		}
 	}
 
-    // NOLINTNEXTLINE(misc-no-recursion)
-    llvm::Value* getReturnValue() override {
-        return returnValue.getValue();
-    }
+	// NOLINTNEXTLINE(misc-no-recursion)
+	llvm::Value *getReturnValue() override { return returnValue.getValue(); }
 
-    // NOLINTNEXTLINE(misc-no-recursion)
-    llvm::BasicBlock* getReturnBlock() override {
-        return returnBlock;
-    }
+	// NOLINTNEXTLINE(misc-no-recursion)
+	llvm::BasicBlock *getReturnBlock() override { return returnBlock; }
 };
 
 class IfAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> condition;
 	std::unique_ptr<ScopeAST> trueBranch;
 	std::unique_ptr<ScopeAST> falseBranch;
+
    public:
 	IfAST(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<ScopeAST> trueBranch,
 		  std::unique_ptr<ScopeAST> falseBranch)
@@ -626,103 +627,103 @@ class IfAST : public BaseASTNode {
 			return {};
 		}
 
-        bool trueBranchReturn = trueBranch && trueBranch->alwaysReturns();
-        bool falseBranchReturn = falseBranch && falseBranch->alwaysReturns();
-		llvm::Value *conditionBool =
-			builder.CreateICmpNE(conditionValue.getValue(), llvm::ConstantInt::get(conditionValue.getType()->getBase(), 0));
+		bool trueBranchReturn = trueBranch && trueBranch->alwaysReturns();
+		bool falseBranchReturn = falseBranch && falseBranch->alwaysReturns();
+		llvm::Value *conditionBool = builder.CreateICmpNE(
+			conditionValue.getValue(), llvm::ConstantInt::get(conditionValue.getType()->getBase(), 0));
 		llvm::Function *function = builder.GetInsertBlock()->getParent();
 		llvm::BasicBlock *trueBlock = llvm::BasicBlock::Create(builder.getContext(), "true", function);
 		llvm::BasicBlock *falseBlock = llvm::BasicBlock::Create(builder.getContext(), "false");
 		llvm::BasicBlock *exitBlock = nullptr;
-        if(!trueBranchReturn || !falseBranchReturn) exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
+		if (!trueBranchReturn || !falseBranchReturn) exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
 		builder.CreateCondBr(conditionBool, trueBlock, falseBlock);
 		builder.SetInsertPoint(trueBlock);
 
 		if (trueBranch) {
 			trueBranch->codegen(builder);
 		}
-		if(!trueBranchReturn) builder.CreateBr(exitBlock);
+		if (!trueBranchReturn) builder.CreateBr(exitBlock);
 		function->getBasicBlockList().push_back(falseBlock);
 		builder.SetInsertPoint(falseBlock);
 		if (falseBranch) {
 			falseBranch->codegen(builder);
 		}
-		if(!falseBranchReturn) builder.CreateBr(exitBlock);
+		if (!falseBranchReturn) builder.CreateBr(exitBlock);
 
-        if(!trueBranchReturn || !falseBranchReturn) {
-            function->getBasicBlockList().push_back(exitBlock);
-            builder.SetInsertPoint(exitBlock);
-        }
+		if (!trueBranchReturn || !falseBranchReturn) {
+			function->getBasicBlockList().push_back(exitBlock);
+			builder.SetInsertPoint(exitBlock);
+		}
 		return {};
 	}
 
-    bool alwaysReturns() override {
-        return trueBranch->alwaysReturns() && falseBranch && falseBranch->alwaysReturns();
-    }
+	bool alwaysReturns() override { return trueBranch->alwaysReturns() && falseBranch && falseBranch->alwaysReturns(); }
 };
 
 class WhileAST : public BaseASTNode {
-    std::unique_ptr<BaseASTNode> condition;
-    std::unique_ptr<ScopeAST> body;
+	std::unique_ptr<BaseASTNode> condition;
+	std::unique_ptr<ScopeAST> body;
+
    public:
-    WhileAST(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<ScopeAST> body)
-        : condition(std::move(condition)), body(std::move(body)) {}
+	WhileAST(std::unique_ptr<BaseASTNode> condition, std::unique_ptr<ScopeAST> body)
+		: condition(std::move(condition)), body(std::move(body)) {}
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        std::string output = std::to_string((int64_t)this) + " [label=\"WhileAST\"]\n";
-        if (condition) output += condition->generateDOTHeader();
-        if (body) output += body->generateDOTHeader();
-        return output;
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		std::string output = std::to_string((int64_t)this) + " [label=\"WhileAST\"]\n";
+		if (condition) output += condition->generateDOTHeader();
+		if (body) output += body->generateDOTHeader();
+		return output;
+	}
 
-    [[nodiscard]] std::string generateDOT() override {
-        std::string output;
-        if (condition) {
-            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)condition.get()) + "\n";
-            output += condition->generateDOT();
-        }
-        if (body) {
-            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)body.get()) + "\n";
-            output += body->generateDOT();
-        }
-        return output;
-    }
+	[[nodiscard]] std::string generateDOT() override {
+		std::string output;
+		if (condition) {
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)condition.get()) + "\n";
+			output += condition->generateDOT();
+		}
+		if (body) {
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)body.get()) + "\n";
+			output += body->generateDOT();
+		}
+		return output;
+	}
 
-    void populateParents() override {
-        if (condition) {
-            condition->parent = this;
-            condition->populateParents();
-        }
-        if (body) {
-            body->parent = this;
-            body->populateParents();
-        }
-    }
+	void populateParents() override {
+		if (condition) {
+			condition->parent = this;
+			condition->populateParents();
+		}
+		if (body) {
+			body->parent = this;
+			body->populateParents();
+		}
+	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        llvm::Function *function = builder.GetInsertBlock()->getParent();
-        llvm::BasicBlock *whileConditionBlock = llvm::BasicBlock::Create(builder.getContext(), "whileCondition", function);
-        llvm::BasicBlock *whileBodyBlock = llvm::BasicBlock::Create(builder.getContext(), "whileBody", function);
-        llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
-        builder.CreateBr(whileConditionBlock);
-        builder.SetInsertPoint(whileConditionBlock);
-        Value conditionValue = condition->codegen(builder);
-        if (!conditionValue) {
-            return {};
-        }
-        llvm::Value *conditionBool =
-            builder.CreateICmpNE(conditionValue.getValue(), llvm::ConstantInt::get(conditionValue.getType()->getBase(), 0));
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		llvm::Function *function = builder.GetInsertBlock()->getParent();
+		llvm::BasicBlock *whileConditionBlock =
+			llvm::BasicBlock::Create(builder.getContext(), "whileCondition", function);
+		llvm::BasicBlock *whileBodyBlock = llvm::BasicBlock::Create(builder.getContext(), "whileBody", function);
+		llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(builder.getContext(), "exit");
+		builder.CreateBr(whileConditionBlock);
+		builder.SetInsertPoint(whileConditionBlock);
+		Value conditionValue = condition->codegen(builder);
+		if (!conditionValue) {
+			return {};
+		}
+		llvm::Value *conditionBool = builder.CreateICmpNE(
+			conditionValue.getValue(), llvm::ConstantInt::get(conditionValue.getType()->getBase(), 0));
 
-        builder.CreateCondBr(conditionBool, whileBodyBlock, exitBlock);
-        builder.SetInsertPoint(whileBodyBlock);
-        body->codegen(builder);
-        builder.CreateBr(whileConditionBlock);
+		builder.CreateCondBr(conditionBool, whileBodyBlock, exitBlock);
+		builder.SetInsertPoint(whileBodyBlock);
+		body->codegen(builder);
+		builder.CreateBr(whileConditionBlock);
 
-        function->getBasicBlockList().push_back(exitBlock);
-        builder.SetInsertPoint(exitBlock);
+		function->getBasicBlockList().push_back(exitBlock);
+		builder.SetInsertPoint(exitBlock);
 
-        return {};
-    }
+		return {};
+	}
 };
 
 class ReturnAST : public BaseASTNode {
@@ -749,16 +750,16 @@ class ReturnAST : public BaseASTNode {
 	Value codegen(llvm::IRBuilder<> &builder) override {
 		if (value) {
 			Value val = value->codegen(builder);
-            // Check that the return type matches the function return type
-            // TODO: This should check that Value types are the same, not llvm:Value*
-            if (val.getType()->getBase() != builder.GetInsertBlock()->getParent()->getReturnType()) {
-                compilationError("Return type does not match function return type");
-                return {};
-            }
+			// Check that the return type matches the function return type
+			// TODO: This should check that Value types are the same, not llvm:Value*
+			if (val.getType()->getBase() != builder.GetInsertBlock()->getParent()->getReturnType()) {
+				compilationError("Return type does not match function return type");
+				return {};
+			}
 
 			auto returnValue = getReturnValue();
-            builder.CreateStore(val.getValue(), returnValue);
-            builder.CreateBr(getReturnBlock());
+			builder.CreateStore(val.getValue(), returnValue);
+			builder.CreateBr(getReturnBlock());
 
 			return val;
 		}
@@ -772,9 +773,7 @@ class ReturnAST : public BaseASTNode {
 		}
 	}
 
-    bool alwaysReturns() override {
-        return true;
-    }
+	bool alwaysReturns() override { return true; }
 };
 
 class LetAST : public BaseASTNode {
@@ -801,43 +800,42 @@ class LetAST : public BaseASTNode {
 		return output;
 	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        Value result = value->codegen(builder);
-        llvm::Type* llvmType = nullptr;
-        if(type.empty()) {
-            llvmType = result.getType()->getBase();
-            type = result.getType()->getName();
-        } else {
-            llvmType = result.getType()->getBase();
-        }
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		Value result = value->codegen(builder);
+		llvm::Type *llvmType = nullptr;
+		if (type.empty()) {
+			llvmType = result.getType()->getBase();
+			type = result.getType()->getName();
+		} else {
+			llvmType = result.getType()->getBase();
+		}
 
-        if(!llvmType) {
-            compilationError("Unknown type " + type);
-            return {};
-        }
+		if (!llvmType) {
+			compilationError("Unknown type " + type);
+			return {};
+		}
 
-        // Allocate space on stack for the variable
-        llvm::Value* alloca = builder.CreateAlloca(llvmType);
-        // Store the value in the alloca
-        builder.CreateStore(result.getValue(), alloca);
-        // Add the alloca to the symbol table
-        createVariableInNearestScope(Variable{name, {alloca, getTypeRegistry()->getType(type)}});
+		// Allocate space on stack for the variable
+		llvm::Value *alloca = builder.CreateAlloca(llvmType);
+		// Store the value in the alloca
+		builder.CreateStore(result.getValue(), alloca);
+		// Add the alloca to the symbol table
+		createVariableInNearestScope(Variable{name, {alloca, getTypeRegistry()->getType(type)}});
 
-        return {};
-    }
+		return {};
+	}
 
-    void populateParents() override {
-        if(value) {
-            value->parent = this;
-            value->populateParents();
-        }
-    }
+	void populateParents() override {
+		if (value) {
+			value->parent = this;
+			value->populateParents();
+		}
+	}
 };
 
 class ModuleAST : public BaseASTNode {
 	std::vector<std::unique_ptr<BaseASTNode>> expressions;
 	std::unique_ptr<llvm::Module> module = nullptr;
-
 
    public:
 	explicit ModuleAST(std::vector<std::unique_ptr<BaseASTNode>> expressions, std::unique_ptr<llvm::Module> module)
@@ -877,33 +875,32 @@ class ModuleAST : public BaseASTNode {
 	llvm::Module *getModule() override { return module.get(); }
 };
 
-std::unique_ptr<BaseASTNode> fromLiteral(const std::string& integer, const std::string& type) {
-    // TODO: There is definitely a better way to do this
-    if(type == "i8") {
-        return std::make_unique<SignedIntAST>(std::stoi(integer), 8);
-    } else if(type == "i16") {
-        return std::make_unique<SignedIntAST>(std::stoi(integer), 16);
-    } else if(type == "i32") {
-        return std::make_unique<SignedIntAST>(std::stoi(integer), 32);
-    } else if(type == "i64") {
-        return std::make_unique<SignedIntAST>(std::stoi(integer), 64);
-    } else if(type == "u8") {
-        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 8);
-    } else if(type == "u16") {
-        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 16);
-    } else if(type == "u32") {
-        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 32);
-    } else if(type == "u64") {
-        return std::make_unique<UnsignedIntAST>(std::stoi(integer), 64);
-    } else if(type == "f32") {
-        return std::make_unique<FloatingPointAST>(std::stod(integer), 32);
-    } else if(type == "f64") {
-        return std::make_unique<FloatingPointAST>(std::stod(integer), 64);
-    } else {
-        compilationError("Unknown literal " + type);
-        return nullptr;
-    }
+std::unique_ptr<BaseASTNode> fromLiteral(const std::string &integer, const std::string &type) {
+	// TODO: There is definitely a better way to do this
+	if (type == "i8") {
+		return std::make_unique<SignedIntAST>(std::stoi(integer), 8);
+	} else if (type == "i16") {
+		return std::make_unique<SignedIntAST>(std::stoi(integer), 16);
+	} else if (type == "i32") {
+		return std::make_unique<SignedIntAST>(std::stoi(integer), 32);
+	} else if (type == "i64") {
+		return std::make_unique<SignedIntAST>(std::stoi(integer), 64);
+	} else if (type == "u8") {
+		return std::make_unique<UnsignedIntAST>(std::stoi(integer), 8);
+	} else if (type == "u16") {
+		return std::make_unique<UnsignedIntAST>(std::stoi(integer), 16);
+	} else if (type == "u32") {
+		return std::make_unique<UnsignedIntAST>(std::stoi(integer), 32);
+	} else if (type == "u64") {
+		return std::make_unique<UnsignedIntAST>(std::stoi(integer), 64);
+	} else if (type == "f32") {
+		return std::make_unique<FloatingPointAST>(std::stod(integer), 32);
+	} else if (type == "f64") {
+		return std::make_unique<FloatingPointAST>(std::stod(integer), 64);
+	} else {
+		compilationError("Unknown literal " + type);
+		return nullptr;
+	}
 }
-
 
 #endif	// EMMC_AST_H

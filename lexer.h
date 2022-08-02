@@ -98,7 +98,8 @@ std::vector<Token> lex(const std::string& input) {
 		}
 
 		if (std::isdigit(input[pos])) {
-			if (current.type != TOK_NONE && current.type != TOK_INTEGER && current.type != TOK_IDENTIFIER && current.type != TOK_FLOATING_POINT) {
+			if (current.type != TOK_NONE && current.type != TOK_INTEGER && current.type != TOK_IDENTIFIER &&
+				current.type != TOK_FLOATING_POINT) {
 				addPreviousToken();
 				state = LEXER_STATE_START;	// i.e. go into the next condition
 			}
@@ -113,12 +114,12 @@ std::vector<Token> lex(const std::string& input) {
 			continue;
 		}
 
-        if(input[pos] == '.' && current.type == TOK_INTEGER) {
-            current.literal += input[pos];
-            current.type = TOK_FLOATING_POINT;
-            pos++;
-            continue;
-        }
+		if (input[pos] == '.' && current.type == TOK_INTEGER) {
+			current.literal += input[pos];
+			current.type = TOK_FLOATING_POINT;
+			pos++;
+			continue;
+		}
 
 		if (std::isalpha(input[pos]) || input[pos] == '_') {
 			if (current.type != TOK_NONE && current.type != TOK_IDENTIFIER) {
@@ -172,8 +173,8 @@ std::vector<Token> lex(const std::string& input) {
 			} else if (current.type == TOK_GREATER) {
 				current = {TOK_GREATER_OR_EQUAL, ">=", line};
 			} else if (current.type == TOK_NOT) {
-                current = {TOK_NOT_EQUALS, "!=", line};
-            } else {
+				current = {TOK_NOT_EQUALS, "!=", line};
+			} else {
 				addPreviousToken();
 				current = {TOK_ASSIGN, "=", line};
 			}
