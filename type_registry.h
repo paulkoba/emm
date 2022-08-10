@@ -16,17 +16,18 @@ class TypeRegistry {
 	std::unordered_map<std::string, Type*> types;
 
 	void registerBuiltinTypes(llvm::IRBuilder<>& builder) {
-		registerType(new Type(builder.getInt8Ty(), "i8", true, true));
-		registerType(new Type(builder.getInt16Ty(), "i16", true, true));
-		registerType(new Type(builder.getInt32Ty(), "i32", true, true));
-		registerType(new Type(builder.getInt64Ty(), "i64", true, true));
-		registerType(new Type(builder.getFloatTy(), "f32", true, true));
-		registerType(new Type(builder.getDoubleTy(), "f64", true, true));
-		registerType(new Type(builder.getInt8Ty(), "u8", true, false));
-		registerType(new Type(builder.getInt16Ty(), "u16", true, false));
-		registerType(new Type(builder.getInt32Ty(), "u32", true, false));
-		registerType(new Type(builder.getInt64Ty(), "u64", true, false));
-		registerType(new Type(builder.getInt1Ty(), "bool", true, false));
+        registerType(new Type(builder.getInt8Ty(), "i8", true, true));
+        registerType(new Type(builder.getInt16Ty(), "i16", true, true));
+        registerType(new Type(builder.getInt32Ty(), "i32", true, true));
+        registerType(new Type(builder.getInt64Ty(), "i64", true, true));
+        registerType(new Type(builder.getFloatTy(), "f32", true, true));
+        registerType(new Type(builder.getDoubleTy(), "f64", true, true));
+        registerType(new Type(builder.getInt8Ty(), "u8", true, false));
+        registerType(new Type(builder.getInt16Ty(), "u16", true, false));
+        registerType(new Type(builder.getInt32Ty(), "u32", true, false));
+        registerType(new Type(builder.getInt64Ty(), "u64", true, false));
+        registerType(new Type(builder.getInt1Ty(), "bool", true, false));
+        registerType(new Type(builder.getVoidTy(), "void", false, false));
 	}
 
    public:

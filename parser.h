@@ -13,6 +13,7 @@ static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, i
 static std::unique_ptr<WhileAST> parseWhile(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<StructAST> parseStruct(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx);
 
 static int getTokenPrecedence(TokenType token) {
@@ -143,6 +144,19 @@ static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& toke
 			left = std::make_unique<AsAST>(std::move(left), type);
 			continue;
 		}
+
+        if (tokens[idx].type == TOK_DOT) {
+            ++idx;
+            if (tokens[idx].type != TOK_IDENTIFIER) {
+                compilationError(tokens[idx].line, "Expected member name, got: " + tokens[idx].literal);
+                return nullptr;
+            }
+            auto member = tokens[idx].literal;
+            ++idx;
+
+            left = std::make_unique<MemberAST>(member, std::move(left));
+            continue;
+        }
 
 		auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
 
@@ -446,22 +460,92 @@ static std::unique_ptr<ModuleAST> parseFile(const std::vector<Token>& tokens, st
 	std::vector<std::unique_ptr<BaseASTNode>> result;
 	int idx = 0;
 	while (idx < tokens.size()) {
-		if (tokens[idx].type == TOK_FN) {
+		if (tokens[idx].type == TOK_EXTERN) {
+            idx++;
+            if (tokens[idx].type != TOK_FN) {
+                compilationError(tokens[idx].line, "Expected function, got " + tokens[idx].literal);
+                return nullptr;
+            }
+            idx++;
+            auto prototype = parsePrototype(tokens, idx);
+            if (!prototype) {
+                return nullptr;
+            }
+            result.push_back(std::move(prototype));
+        } else if (tokens[idx].type == TOK_FN) {
 			idx++;
 			auto funcResult = parseFunction(tokens, idx);
 			if (!funcResult) {
 				continue;
 			}
 			result.push_back(std::move(funcResult));
-		} else if (tokens[idx].type == TOK_EOF) {
-			break;
-		} else {
+		} else if (tokens[idx].type == TOK_STRUCT) {
+            auto structResult = parseStruct(tokens, idx);
+            if (!structResult) {
+                continue;
+            }
+            result.push_back(std::move(structResult));
+        } else if (tokens[idx].type == TOK_EOF) {
+            break;
+        } else {
 			compilationError(tokens[idx].line, "Unexpected token " + tokens[idx].literal);
 			++idx;
 		}
 	}
 
 	return std::make_unique<ModuleAST>(std::move(result), std::move(module));
+}
+
+static std::unique_ptr<StructAST> parseStruct(const std::vector<Token>& tokens, int& idx) {
+    if (tokens[idx].type != TOK_STRUCT) {
+        compilationError(tokens[idx].line, "Expected struct, got " + tokens[idx].literal);
+        return nullptr;
+    }
+    ++idx;
+    if (tokens[idx].type != TOK_IDENTIFIER) {
+        compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
+        return nullptr;
+    }
+    std::string name = tokens[idx].literal;
+    ++idx;
+    if (tokens[idx].type != TOK_LBRACE) {
+        compilationError(tokens[idx].line, "Expected \"{\", got " + tokens[idx].literal);
+        return nullptr;
+    }
+    ++idx;
+    std::vector<std::pair<std::string, std::string>> members;
+    while (tokens[idx].type != TOK_RBRACE) {
+        if (tokens[idx].type != TOK_IDENTIFIER) {
+            compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
+            return nullptr;
+        }
+        std::string memberName = tokens[idx].literal;
+        ++idx;
+        if (tokens[idx].type != TOK_COLON) {
+            compilationError(tokens[idx].line, "Expected \":\", got " + tokens[idx].literal);
+            return nullptr;
+        }
+        ++idx;
+        if (tokens[idx].type != TOK_IDENTIFIER) {
+            compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
+            return nullptr;
+        }
+        std::string memberType = tokens[idx].literal;
+        ++idx;
+        if (tokens[idx].type != TOK_COMMA && tokens[idx].type != TOK_RBRACE) {
+            compilationError(tokens[idx].line, "Expected \",\" or \"}\", got " + tokens[idx].literal);
+            return nullptr;
+        }
+
+        if(tokens[idx].type == TOK_COMMA) {
+            ++idx;
+        }
+
+        members.emplace_back(memberName, memberType);
+    }
+    ++idx;
+
+    return std::make_unique<StructAST>(name, members);
 }
 
 #endif	// EMMC_PARSER_H

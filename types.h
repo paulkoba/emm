@@ -148,20 +148,43 @@ Value buildBuiltinBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, Tok
 	}
 }
 
-Value buildBuiltinUnaryOp(llvm::IRBuilder<>& builder, Value operand, TokenType op) {
-	llvm::Value* result = nullptr;
+Value buildBuiltinIntegerUnaryOp(llvm::IRBuilder<>& builder, Value lhs, TokenType op) {
+    llvm::Value* result = nullptr;
+    switch (op) {
+        case TOK_PLUS:
+            return {lhs.getValue(), lhs.getType()};
+        case TOK_MINUS:
+            result = builder.CreateNeg(lhs.getValue());
+            return {result, lhs.getType()};
+        case TOK_NOT:
+            result = builder.CreateNot(lhs.getValue());
+            return {result, lhs.getType()};
+        default:
+            compilationError("buildBuiltinIntegerUnaryOp: Not yet implemented.");
+            return {nullptr, nullptr};
+    }
+}
 
-	switch (op) {
-		case TOK_MINUS:
-			result = builder.CreateNeg(operand.getValue());
-			return {result, operand.getType()};
-		case TOK_NOT:
-			result = builder.CreateNot(operand.getValue());
-			return {result, operand.getType()};
-		default:
-			compilationError("buildBuiltinUnaryOp: Not yet implemented.");
-			return {nullptr, nullptr};
-	}
+Value buildBuiltinFloatingPointUnaryOp(llvm::IRBuilder<>& builder, Value lhs, TokenType op) {
+    llvm::Value* result = nullptr;
+    switch (op) {
+        case TOK_PLUS:
+            return {lhs.getValue(), lhs.getType()};
+        case TOK_MINUS:
+            result = builder.CreateFNeg(lhs.getValue());
+            return {result, lhs.getType()};
+        default:
+            compilationError("buildBuiltinFloatingPointUnaryOp: Not yet implemented.");
+            return {nullptr, nullptr};
+    }
+}
+
+Value buildBuiltinUnaryOp(llvm::IRBuilder<>& builder, Value operand, TokenType op) {
+    if(!operand.getType()->getBase()->isFloatingPointTy()) {
+        return buildBuiltinIntegerUnaryOp(builder, operand, op);
+    } else {
+        return buildBuiltinFloatingPointUnaryOp(builder, operand, op);
+    }
 }
 
 Value buildBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType op) {

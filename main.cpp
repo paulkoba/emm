@@ -14,7 +14,7 @@
 #include "parser.h"
 
 int main() {
-	std::ifstream input("../examples/more_types.emm");
+	std::ifstream input("../examples/structs.emm");
 	std::stringstream buffer;
 	buffer << input.rdbuf();
 	auto tmp = lex(buffer.str());

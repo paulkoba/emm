@@ -42,6 +42,7 @@ enum TokenType {
 	TOK_NOT_EQUALS = -27,
 	TOK_NOT = -28,
 	TOK_FLOATING_POINT = -29,
+    TOK_DOT = -30,
 
 	// KEYWORDS
 	TOK_IF = -100,
@@ -53,13 +54,16 @@ enum TokenType {
 	TOK_TRUE = -106,
 	TOK_FALSE = -107,
 	TOK_MUT = -108,
+	TOK_EXTERN = -109,
+    TOK_STRUCT = -110,
 };
 
 // TODO: Get rid of static variable
 TokenType tryMatchKeyword(const std::string& input) {
 	static std::unordered_map<std::string, TokenType> keywords = {
-		{"if", TOK_IF}, {"else", TOK_ELSE}, {"while", TOK_WHILE}, {"return", TOK_RETURN}, {"let", TOK_LET},
-		{"fn", TOK_FN}, {"true", TOK_TRUE}, {"false", TOK_FALSE}, {"mut", TOK_MUT},		  {"as", TOK_AS}};
+		{"if", TOK_IF},	  {"else", TOK_ELSE}, {"while", TOK_WHILE},	 {"return", TOK_RETURN},
+		{"let", TOK_LET}, {"fn", TOK_FN},	  {"true", TOK_TRUE},	 {"false", TOK_FALSE},
+		{"mut", TOK_MUT}, {"as", TOK_AS},	  {"extern", TOK_EXTERN},{"struct", TOK_STRUCT}};
 
 	return keywords.count(input) ? keywords[input] : TOK_NONE;
 }
@@ -102,6 +106,8 @@ TokenType getTrivialTokenType(char ch) {
 			return TOK_COMMA;
 		case '!':
 			return TOK_NOT;
+        case '.':
+            return TOK_DOT;
 		default:
 			return TOK_NONE;
 	}
@@ -161,6 +167,8 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_AS";
 		case TOK_COMMA:
 			return "TOK_COMMA";
+        case TOK_DOT:
+            return "TOK_DOT";
 		case TOK_IF:
 			return "TOK_IF";
 		case TOK_ELSE:
@@ -187,6 +195,10 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_NOT";
 		case TOK_FLOATING_POINT:
 			return "TOK_FLOATING_POINT";
+		case TOK_EXTERN:
+			return "TOK_EXTERN";
+        case TOK_STRUCT:
+            return "TOK_STRUCT";
 		default:
 			return "UNKNOWN";
 	}

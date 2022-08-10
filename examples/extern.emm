@@ -1,0 +1,60 @@
+extern fn print_i64(n : i64) -> i64
+extern fn print_u64(n : u64) -> u64
+extern fn print_f64(n : f64) -> f64
+extern fn print_char(n : i8) -> i8
+
+fn factorial(n : i64) -> i64 {
+    let iter = 1
+    let result = 1
+
+    while iter <= n {
+        result = result * iter
+        iter = iter + 1
+    }
+
+    return result
+}
+
+fn square_root(n : f64) -> f64 {
+    let left = 0.0
+    let right = n
+
+    while right - left > 0.00001 {
+        let mid = (left + right) / 2.0
+        if mid * mid > n {
+            right = mid
+        } else {
+            left = mid
+        }
+    }
+
+    return left
+}
+
+fn funny_circle() -> void {
+    let x = 0
+    let y = 0
+
+    while y <= 25 {
+        while x <= 25 {
+            let shifted_x = x - 10
+            let shifted_y = y - 10
+            if shifted_x * shifted_x + shifted_y * shifted_y <= 90 {
+                print_char(42i8)
+            } else {
+                print_char(32i8)
+            }
+            x = x + 1
+        }
+        print_char(10i8)
+        y = y + 1
+        x = 0
+    }
+}
+
+fn main() -> i64 {
+    print_i64(factorial(5))
+    print_f64(square_root(3.0))
+    funny_circle()
+    return 0
+}

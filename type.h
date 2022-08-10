@@ -12,6 +12,8 @@
 
 #include <utility>
 
+#include "logging.h"
+
 class Type {
 	llvm::Type* base = nullptr;	 // Most of the functionality is directly derived from this
 	std::string name;
@@ -29,10 +31,45 @@ class Type {
 		  useBuiltinOperators(useBuiltinOperators),
 		  signedBuiltinOperators(signedBuiltinOperators) {}
 
+    virtual ~Type() = default;
+
 	[[nodiscard]] llvm::Type* getBase() { return base; }
 	[[nodiscard]] const std::string& getName() const { return name; }
 	[[nodiscard]] bool usesBuiltinOperators() const { return useBuiltinOperators; }
 	[[nodiscard]] bool usesSignedBuiltinOperators() const { return signedBuiltinOperators; }
+
+    [[nodiscard]] virtual std::size_t getMemberOffset(const std::string& memberName) {
+        compilationError("Cannot get member offset of type " + name);
+        return 0;
+    }
+
+    [[nodiscard]] virtual Type* getMemberType(const std::string& memberName) {
+        compilationError("Cannot get member type of type " + memberName);
+        return nullptr;
+    }
+};
+
+class StructType : public Type {
+    std::map<std::string, std::size_t> memberOffsets;
+    std::map<std::string, Type*> memberTypes;
+
+    friend class StructAST;
+public:
+    StructType(llvm::Type* base, std::string name, const std::vector<std::pair<std::string, std::string>>& members, const std::vector<Type*>& types)
+        : Type(base, std::move(name), false, false) {
+        for (std::size_t i = 0; i < members.size(); i++) {
+            memberOffsets[members[i].first] = i;
+            memberTypes[members[i].first] = types[i];
+        }
+    }
+
+    [[nodiscard]] std::size_t getMemberOffset(const std::string& memberName) override {
+        return memberOffsets[memberName];
+    }
+
+    [[nodiscard]] Type* getMemberType(const std::string& memberName) override {
+        return memberTypes[memberName];
+    }
 };
 
 #endif	// EMMC_TYPE_H

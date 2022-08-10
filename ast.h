@@ -84,6 +84,13 @@ class BaseASTNode {
 	}
 
 	virtual bool alwaysReturns() { return false; }
+
+    virtual void logVariables() {
+        std::cerr << "--- Not scope \n";
+        if(parent) {
+            parent->logVariables();
+        }
+    }
 };
 
 class SignedIntAST : public BaseASTNode {
@@ -173,6 +180,7 @@ class VariableAST : public BaseASTNode {
 
 			return {builder.CreateLoad(llvmType->getBase(), var->value.getValue()), var->value.getType()};
 		}
+        logVariables();
 
 		compilationError("Variable " + name + " not found");
 		return {};
@@ -469,6 +477,17 @@ class ScopeAST : public BaseASTNode {
 		}
 		return false;
 	}
+
+    void logVariables() override {
+        std::cerr << "--- Scope \n";
+        for (const auto &variable : variables) {
+            std::cerr << variable.first << " " << variable.second.value.getType()->getName() << std::endl;
+        }
+
+        if(parent) {
+            parent->logVariables();
+        }
+    }
 };
 
 class FunctionAST : public BaseASTNode {
@@ -538,6 +557,10 @@ class FunctionAST : public BaseASTNode {
 
 		if (body) {
 			body->codegen(builder);
+
+            if(!body->alwaysReturns()) {
+                builder.CreateBr(returnBlock);
+            }
 		}
 
 		// Return value
@@ -709,6 +732,7 @@ class WhileAST : public BaseASTNode {
 		builder.SetInsertPoint(whileConditionBlock);
 		Value conditionValue = condition->codegen(builder);
 		if (!conditionValue) {
+            compilationError("Condition of while statement is not a valid expression");
 			return {};
 		}
 		llvm::Value *conditionBool = builder.CreateICmpNE(
@@ -831,6 +855,95 @@ class LetAST : public BaseASTNode {
 			value->populateParents();
 		}
 	}
+};
+
+class StructAST : public BaseASTNode {
+    std::string name;
+    std::vector<std::pair<std::string, std::string>> members;
+
+public:
+    explicit StructAST(std::string name, std::vector<std::pair<std::string, std::string>> members)
+        : name(std::move(name)), members(std::move(members)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output = std::to_string((int64_t)this) + " [label=\"StructAST " + name + "\n";
+        for (auto &member : members) {
+            output += member.first + ":" + member.second + "\n";
+        }
+        output += "\"]\n";
+        return output;
+    }
+
+    [[nodiscard]] std::string generateDOT() override {
+        return "";
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        // Create array of member types
+        std::vector<llvm::Type *> memberTypes;
+        std::vector<Type *> internalTypes;
+        for (auto &member : members) {
+            // Get type from string
+            auto type = getTypeRegistry()->getType(member.second);
+            memberTypes.push_back(type->getBase());
+            internalTypes.push_back(type);
+        }
+
+        // Create the struct type
+        llvm::StructType *structType = llvm::StructType::create(builder.getContext(), memberTypes, name);
+
+        // Add the struct type to the type registry
+        getTypeRegistry()->registerType(name, new StructType(structType, name, members, internalTypes));
+
+        return {};
+    }
+};
+
+class MemberAST : public BaseASTNode {
+    std::string name;
+    std::unique_ptr<BaseASTNode> value;
+
+public:
+    MemberAST(std::string name, std::unique_ptr<BaseASTNode> value)
+        : name(std::move(name)), value(std::move(value)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output = std::to_string((int64_t)this) + " [label=\"MemberAST " + name + "\"]\n";
+        if (value) output += value->generateDOTHeader();
+        return output;
+    }
+
+    [[nodiscard]] std::string generateDOT() override {
+        std::string output;
+        if (value) {
+            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)value.get()) + "\n";
+            output += value->generateDOT();
+        }
+        return output;
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        Value result = value->codegen(builder);
+
+        if(result.getType()->usesBuiltinOperators()) {
+            compilationError("Cannot use member operator on type " + result.getType()->getName());
+            return {};
+        }
+
+        auto offset = result.getType()->getMemberOffset(name);
+
+        // Extract element
+        auto extracted = builder.CreateExtractValue(result.getValue(), offset);
+
+        return {extracted, result.getType()->getMemberType(name)};
+    }
+
+    void populateParents() override {
+        if (value) {
+            value->parent = this;
+            value->populateParents();
+        }
+    }
 };
 
 class ModuleAST : public BaseASTNode {
