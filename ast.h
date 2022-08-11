@@ -34,7 +34,15 @@ class BaseASTNode {
 
 	virtual std::string generateDOT() { return ""; }
 
-	virtual Value codegen(llvm::IRBuilder<> &builder) { return {}; }
+	virtual Value codegen(llvm::IRBuilder<> &builder) {
+        compilationError("Cannot perform codegen on this node");
+        return {};
+    }
+
+    virtual Value codegenAssignment(llvm::IRBuilder<> &builder, Value value) {
+        compilationError("Cannot perform assignment codegen on this node");
+        return {};
+    }
 
 	virtual void populateParents() {
 		// Do nothing
@@ -85,11 +93,23 @@ class BaseASTNode {
 
 	virtual bool alwaysReturns() { return false; }
 
+    // NOLINTNEXTLINE(misc-no-recursion)
     virtual void logVariables() {
         std::cerr << "--- Not scope \n";
         if(parent) {
             parent->logVariables();
         }
+    }
+};
+
+class HelperASTNode : public BaseASTNode {
+private:
+    Value value;
+public:
+    HelperASTNode(Value value) : value(value) {}
+    virtual ~HelperASTNode() = default;
+    virtual Value codegen(llvm::IRBuilder<> &builder) override {
+        return value;
     }
 };
 
@@ -185,6 +205,15 @@ class VariableAST : public BaseASTNode {
 		compilationError("Variable " + name + " not found");
 		return {};
 	}
+
+    Value codegenAssignment(llvm::IRBuilder<> &builder, Value rhs) override {
+        auto lhs = codegen(builder);
+        if (!lhs) return {};
+
+        auto result = builder.CreateStore(rhs.getValue(),
+                                     llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand());
+        return {result, lhs.getType()};
+    }
 };
 
 class StringAST : public BaseASTNode {
@@ -227,12 +256,22 @@ class BinaryExprAST : public BaseASTNode {
 	}
 
 	Value codegen(llvm::IRBuilder<> &builder) override {
-		auto lhsValue = lhs->codegen(builder);
-		auto rhsValue = rhs->codegen(builder);
-		if (!lhsValue || !rhsValue) return {};
+		if(op != TOK_ASSIGN) {
+            auto lhsValue = lhs->codegen(builder);
+            auto rhsValue = rhs->codegen(builder);
 
-		auto r = buildBinaryOp(builder, lhsValue, rhsValue, op);
-		return r;
+            if (!lhsValue || !rhsValue) return {};
+
+            auto r = buildBinaryOp(builder, lhsValue, rhsValue, op);
+
+            return r;
+        } else {
+            auto rhsValue = rhs->codegen(builder);
+
+            if (!rhsValue) return {};
+
+            return lhs->codegenAssignment(builder, rhsValue);
+        }
 	}
 
 	void populateParents() override {
@@ -538,7 +577,6 @@ class FunctionAST : public BaseASTNode {
 		llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
 		returnBlock = llvm::BasicBlock::Create(builder.getContext(), "return", function);
 		builder.SetInsertPoint(entryBlock);
-
 		std::size_t idx = 0;
 		for (auto &arg : function->args()) {
 			llvm::Value *stored = builder.CreateAlloca(arg.getType());
@@ -548,7 +586,6 @@ class FunctionAST : public BaseASTNode {
 
 			++idx;
 		}
-
 		// Allocate space for return value
 		if (proto->returnType != "void") {
 			returnValue = {builder.CreateAlloca(getTypeRegistry()->getType(proto->returnType)->getBase()),
@@ -860,7 +897,7 @@ class LetAST : public BaseASTNode {
 class StructAST : public BaseASTNode {
     std::string name;
     std::vector<std::pair<std::string, std::string>> members;
-
+    std::unique_ptr<FunctionAST> constructor;
 public:
     explicit StructAST(std::string name, std::vector<std::pair<std::string, std::string>> members)
         : name(std::move(name)), members(std::move(members)) {}
@@ -893,7 +930,20 @@ public:
         llvm::StructType *structType = llvm::StructType::create(builder.getContext(), memberTypes, name);
 
         // Add the struct type to the type registry
-        getTypeRegistry()->registerType(name, new StructType(structType, name, members, internalTypes));
+        auto internalStructType = new StructType(structType, name, members, internalTypes);
+        getTypeRegistry()->registerType(name, internalStructType);
+
+        auto scope = std::vector<std::unique_ptr<BaseASTNode>>();
+        scope.push_back(static_cast<std::unique_ptr<BaseASTNode>>(std::make_unique<ReturnAST>(std::make_unique<HelperASTNode>(Value{internalStructType->getDefaultValue(builder), getTypeRegistry()->getType(name)}))));
+
+        // Generate and register default constructor for the struct
+        // TODO: This will need to be completely redone once i support operator overloading
+        constructor = std::make_unique<FunctionAST>(
+                std::make_unique<PrototypeAST>(name, name, std::vector<std::pair<std::string, std::string>>{}),
+                                               std::make_unique<ScopeAST>(std::move(scope)));
+        constructor->parent = this;
+        constructor->populateParents();
+        constructor->codegen(builder);
 
         return {};
     }
@@ -936,6 +986,24 @@ public:
         auto extracted = builder.CreateExtractValue(result.getValue(), offset);
 
         return {extracted, result.getType()->getMemberType(name)};
+    }
+
+    // TODO: This is not an intended way to do this, and may generate suboptimal code
+    Value codegenAssignment(llvm::IRBuilder<> &builder, Value val) override {
+        Value result = value->codegen(builder);
+
+        if(result.getType()->usesBuiltinOperators()) {
+            compilationError("Cannot use member operator on type " + result.getType()->getName());
+            return {};
+        }
+
+        auto offset = result.getType()->getMemberOffset(name);
+
+        // Insert element
+        auto inserted = builder.CreateInsertValue(result.getValue(), val.getValue(), offset);
+
+        // Store the value in the alloca
+        return value->codegenAssignment(builder, {inserted, result.getType()->getMemberType(name)});
     }
 
     void populateParents() override {

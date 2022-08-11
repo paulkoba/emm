@@ -18,10 +18,8 @@ static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& to
 
 static int getTokenPrecedence(TokenType token) {
 	switch (token) {
-		case TOK_ASSIGN:
-			return 1;
-		case TOK_AS:
-			return 9;
+        case TOK_ASSIGN:
+            return 1;
 		case TOK_EQUALS:
 		case TOK_LESS:
 		case TOK_LESS_OR_EQUAL:
@@ -36,6 +34,10 @@ static int getTokenPrecedence(TokenType token) {
 		case TOK_DIVISION:
 		case TOK_MODULO:
 			return 30;
+        case TOK_AS:
+            return 40;
+        case TOK_DOT:
+            return 50;
 		default:
 			return -1;
 	}
@@ -131,19 +133,19 @@ static std::unique_ptr<BaseASTNode> parseUnary(const std::vector<Token>& tokens,
 // NOLINTNEXTLINE(misc-no-recursion)
 static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& tokens, int& idx,
 												  std::unique_ptr<BaseASTNode> left, int precedence) {
-	while (true) {
-		if (tokens[idx].type == TOK_AS) {
-			++idx;
-			if (tokens[idx].type != TOK_IDENTIFIER) {
-				compilationError(tokens[idx].line, "Expected type name, got: " + tokens[idx].literal);
-				return nullptr;
-			}
-			auto type = tokens[idx].literal;
-			++idx;
+    while (true) {
+        if (tokens[idx].type == TOK_AS) {
+            ++idx;
+            if (tokens[idx].type != TOK_IDENTIFIER) {
+                compilationError(tokens[idx].line, "Expected type name, got: " + tokens[idx].literal);
+                return nullptr;
+            }
+            auto type = tokens[idx].literal;
+            ++idx;
 
-			left = std::make_unique<AsAST>(std::move(left), type);
-			continue;
-		}
+            left = std::make_unique<AsAST>(std::move(left), type);
+            continue;
+        }
 
         if (tokens[idx].type == TOK_DOT) {
             ++idx;
@@ -158,26 +160,26 @@ static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& toke
             continue;
         }
 
-		auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
+        auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
 
-		if (binOpPrecedence < precedence) {
-			return left;
-		}
+        if (binOpPrecedence < precedence) {
+            return left;
+        }
 
-		const Token& token = tokens[idx];
-		++idx;
-		auto right = parseUnary(tokens, idx);
-		if (!right) return right;
+        const Token& token = tokens[idx];
+        ++idx;
+        auto right = parseUnary(tokens, idx);
+        if (!right) return right;
 
-		auto nextPrecedence = getTokenPrecedence(tokens[idx].type);
+        auto nextPrecedence = getTokenPrecedence(tokens[idx].type);
 
-		if (binOpPrecedence < nextPrecedence) {
-			right = parseBinaryOp(tokens, idx, std::move(right), binOpPrecedence + 1);
-			if (!right) return right;
-		}
+        if (binOpPrecedence < nextPrecedence) {
+            right = parseBinaryOp(tokens, idx, std::move(right), binOpPrecedence + 1);
+            if (!right) return right;
+        }
 
-		left = std::make_unique<BinaryExprAST>(std::move(left), std::move(right), token.type);
-	}
+        left = std::make_unique<BinaryExprAST>(std::move(left), std::move(right), token.type);
+    }
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)

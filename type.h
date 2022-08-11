@@ -47,6 +47,19 @@ class Type {
         compilationError("Cannot get member type of type " + memberName);
         return nullptr;
     }
+
+    virtual llvm::Value* getDefaultValue(llvm::IRBuilder<>& builder) {
+        if (base->isIntegerTy()) {
+            return llvm::ConstantInt::get(base, 0);
+        } else if (base->isFloatTy()) {
+            return llvm::ConstantFP::get(base, 0);
+        } else if (base->isPointerTy()) {
+            return llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(base));
+        } else {
+            compilationError("Cannot get default value of type " + getName());
+            return nullptr;
+        }
+    }
 };
 
 class StructType : public Type {
@@ -69,6 +82,10 @@ public:
 
     [[nodiscard]] Type* getMemberType(const std::string& memberName) override {
         return memberTypes[memberName];
+    }
+
+    llvm::Value* getDefaultValue(llvm::IRBuilder<>& builder) override {
+        return llvm::ConstantStruct::get(llvm::cast<llvm::StructType>(getBase()), {});
     }
 };
 

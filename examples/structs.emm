@@ -1,31 +1,20 @@
-struct SomeStruct {
-    a : u16,
-    b : i32,
-    c : f64
+extern fn print_i64(n : i64) -> i64
+
+struct SimpleStruct {
+    a : i32,
+    b : i64,
 }
 
-struct SomeOtherStruct {
-    d : f32,
-    e : u8,
-    f : i16,
-}
-
-struct SomeThirdStruct {
-    a : bool,
-    b : bool,
-    c : bool,
-    d : bool,
-    e : bool,
-    f : bool,
-    g : bool,
-    h : bool,
-}
-
-fn funny_fn(x : SomeThirdStruct) -> SomeThirdStruct {
-    let y = x.g
-    return x
+fn simple_fn(a : SimpleStruct) -> i64 {
+    return a.a as i64 + a.b
 }
 
 fn main() -> i64 {
+    let a : SimpleStruct = SimpleStruct()
+
+    a.a = 42
+
+    print_i64(simple_fn(a))
+
     return 0
 }
