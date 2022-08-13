@@ -1,0 +1,46 @@
+extern fn malloc(size : i64) -> Pointer<i8>
+extern fn free(ptr : Pointer<i8>) -> void
+extern fn print_i64(n : i64) -> i64
+
+struct WeirdArray {
+    data : Pointer<i64>,
+    size : i64,
+}
+
+impl WeirdArray {
+    fn new(size : i64) -> WeirdArray {
+        self.size = size
+        self.data = malloc(size * 8) as Pointer<i64>
+    }
+
+    fn drop() -> void {
+        free(self.data as Pointer<i8>)
+    }
+
+    fn get(index : i64) -> i64 {
+        return self.data[index]
+    }
+
+    fn set(index : i64, value : i64) -> void {
+        self.data[index] = value
+    }
+}
+
+fn main() -> i64 {
+    let array = WeirdArray()
+    array = array.new(10)
+
+    array.set(0, 1)
+    array.set(1, 2)
+    array.set(2, 3)
+    array.set(3, 4)
+    array.set(4, 5)
+
+    print_i64(array.get(0))
+    print_i64(array.get(1))
+    print_i64(array.get(2))
+    print_i64(array.get(3))
+    print_i64(array.get(4))
+
+    return 0
+}

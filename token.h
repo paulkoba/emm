@@ -56,6 +56,7 @@ enum TokenType {
 	TOK_MUT = -108,
 	TOK_EXTERN = -109,
     TOK_STRUCT = -110,
+    TOK_IMPL = -111,
 };
 
 // TODO: Get rid of static variable
@@ -63,7 +64,7 @@ TokenType tryMatchKeyword(const std::string& input) {
 	static std::unordered_map<std::string, TokenType> keywords = {
 		{"if", TOK_IF},	  {"else", TOK_ELSE}, {"while", TOK_WHILE},	 {"return", TOK_RETURN},
 		{"let", TOK_LET}, {"fn", TOK_FN},	  {"true", TOK_TRUE},	 {"false", TOK_FALSE},
-		{"mut", TOK_MUT}, {"as", TOK_AS},	  {"extern", TOK_EXTERN},{"struct", TOK_STRUCT}};
+		{"mut", TOK_MUT}, {"as", TOK_AS},	  {"extern", TOK_EXTERN},{"struct", TOK_STRUCT}, {"impl", TOK_IMPL}};
 
 	return keywords.count(input) ? keywords[input] : TOK_NONE;
 }
@@ -199,6 +200,8 @@ std::string tokenTypeToString(TokenType type) {
 			return "TOK_EXTERN";
         case TOK_STRUCT:
             return "TOK_STRUCT";
+        case TOK_IMPL:
+            return "TOK_IMPL";
 		default:
 			return "UNKNOWN";
 	}

@@ -533,12 +533,17 @@ class FunctionAST : public BaseASTNode {
 	std::unique_ptr<PrototypeAST> proto;
 	std::unique_ptr<ScopeAST> body;
 
+    std::string structName;
+
 	Value returnValue;
 	llvm::BasicBlock *returnBlock = nullptr;
 
    public:
 	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
 		: proto(std::move(proto)), body(std::move(body)) {}
+
+    FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, std::string structName)
+            : proto(std::move(proto)), body(std::move(body)), structName(std::move(structName)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
 		std::string output = std::to_string((int64_t)this) + " [label=\"FunctionAST\"]\n";
@@ -575,10 +580,21 @@ class FunctionAST : public BaseASTNode {
 		}
 
 		llvm::BasicBlock *entryBlock = llvm::BasicBlock::Create(builder.getContext(), "entry", function);
+
 		returnBlock = llvm::BasicBlock::Create(builder.getContext(), "return", function);
 		builder.SetInsertPoint(entryBlock);
 		std::size_t idx = 0;
+
+        bool skip = true;
+
 		for (auto &arg : function->args()) {
+            if(skip && !structName.empty()) {
+                body->createVariableInNearestScope(Variable{"self", Value{&arg, getTypeRegistry()->getPointedType(getTypeRegistry()->getType(proto->args[idx].second))}});
+                skip = false;
+                ++idx;
+                continue;
+            }
+
 			llvm::Value *stored = builder.CreateAlloca(arg.getType());
 			builder.CreateStore(&arg, stored);
 			body->createVariableInNearestScope(
@@ -586,6 +602,8 @@ class FunctionAST : public BaseASTNode {
 
 			++idx;
 		}
+        std::cerr << "HERE1" << std::endl;
+
 		// Allocate space for return value
 		if (proto->returnType != "void") {
 			returnValue = {builder.CreateAlloca(getTypeRegistry()->getType(proto->returnType)->getBase()),
@@ -608,7 +626,7 @@ class FunctionAST : public BaseASTNode {
 		} else {
 			builder.CreateRetVoid();
 		}
-
+        std::cerr << "HERE2" << std::endl;
 		return {};
 	}
 
@@ -977,6 +995,7 @@ public:
 
         if(result.getType()->usesBuiltinOperators()) {
             compilationError("Cannot use member operator on type " + result.getType()->getName());
+            logVariables();
             return {};
         }
 
@@ -1130,6 +1149,45 @@ public:
         if (index) {
             index->parent = this;
             index->populateParents();
+        }
+    }
+};
+
+class ImplAST : public BaseASTNode {
+    std::vector<std::unique_ptr<BaseASTNode>> functions;
+    std::string name;
+public:
+    ImplAST(std::vector<std::unique_ptr<BaseASTNode>> functions, std::string name)
+            : functions(std::move(functions)), name(std::move(name)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output = std::to_string((int64_t) this) + " [label=\"ImplAST\"]\n";
+        for (const auto &function : functions) {
+            output += function->generateDOTHeader();
+        }
+        return output;
+    }
+
+    [[nodiscard]] std::string generateDOT() override {
+        std::string output;
+        for (const auto &function : functions) {
+            output += std::to_string((int64_t) this) + " -> " + std::to_string((int64_t) function.get()) + "\n";
+            output += function->generateDOT();
+        }
+        return output;
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        for (const auto &function : functions) {
+            function->codegen(builder);
+        }
+        return {};
+    }
+
+    void populateParents() override {
+        for (const auto &function : functions) {
+            function->parent = this;
+            function->populateParents();
         }
     }
 };

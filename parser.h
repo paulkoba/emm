@@ -15,6 +15,9 @@ static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, 
 static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<StructAST> parseStruct(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<BaseASTNode> parseImpl(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& tokens, int& idx);
+static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& tokens, int& idx, const std::string& structName);
 
 // NOLINTNEXTLINE(misc-no-recursion)
 static std::string parseType(const std::vector<Token>& tokens, int& idx) {
@@ -54,6 +57,44 @@ static std::string parseType(const std::vector<Token>& tokens, int& idx) {
     return type;
 }
 
+// NOLINTNEXTLINE(misc-no-recursion)
+static std::unique_ptr<BaseASTNode> parseImpl(const std::vector<Token>& tokens, int& idx) {
+    if(tokens[idx].type != TOK_IMPL) {
+        compilationError("Expected 'impl'");
+        return nullptr;
+    }
+
+    idx++;
+
+    if(tokens[idx].type != TOK_IDENTIFIER) {
+        compilationError("Expected identifier");
+        return nullptr;
+    }
+
+    auto name = parseType(tokens, idx);
+
+    if(tokens[idx].type != TOK_LBRACE) {
+        compilationError("Expected '{'");
+        return nullptr;
+    }
+
+    idx++;
+
+    std::vector<std::unique_ptr<BaseASTNode>> nodes;
+    while(tokens[idx].type != TOK_RBRACE) {
+        if(tokens[idx].type != TOK_FN) {
+            compilationError("Expected 'fn'");
+            return nullptr;
+        }
+
+        idx++;
+        auto fn = parseFunction(tokens, idx, name);
+        nodes.push_back(std::move(fn));
+    }
+    idx++;
+    return std::make_unique<ImplAST>(std::move(nodes), name);
+}
+
 static int getTokenPrecedence(TokenType token) {
 	switch (token) {
         case TOK_ASSIGN:
@@ -74,8 +115,9 @@ static int getTokenPrecedence(TokenType token) {
 			return 30;
         case TOK_AS:
             return 40;
-        case TOK_DOT:
         case TOK_LBRACKET:
+            return 60;
+        case TOK_DOT:
             return 50;
 		default:
 			return -1;
@@ -206,8 +248,15 @@ static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& toke
             auto member = tokens[idx].literal;
             ++idx;
 
-            left = std::make_unique<MemberAST>(member, std::move(left));
-            continue;
+            if (tokens[idx].type == TOK_LPAREN) {
+                auto args = parseArgList(tokens, ++idx);
+                args.insert(args.begin(), std::move(left));
+                left = std::make_unique<CallExprAST>(member, std::move(args));
+                continue;
+            } else {
+                left = std::make_unique<MemberAST>(member, std::move(left));
+                continue;
+            }
         }
 
         auto binOpPrecedence = getTokenPrecedence(tokens[idx].type);
@@ -240,7 +289,7 @@ static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& to
 	return parseBinaryOp(tokens, idx, std::move(lhs), 0);
 }
 
-static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& tokens, int& idx) {
+static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& tokens, int& idx, const std::string& structName = "") {
 	std::string name = tokens[idx].literal;
 	idx++;
 	if (tokens[idx].type != TOK_LPAREN) {
@@ -250,6 +299,10 @@ static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& to
 	idx++;
 	// Parse arguments
 	std::vector<std::pair<std::string, std::string>> args;
+
+    if(!structName.empty()) {
+        args.emplace_back("self", "Pointer < " + structName + " > ");
+    }
 
 	while (tokens[idx].type != TOK_RPAREN) {
 		std::pair<std::string, std::string> nextPair;
@@ -395,6 +448,18 @@ static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& toke
 	return std::make_unique<FunctionAST>(std::move(prototype), std::move(body));
 }
 
+static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& tokens, int& idx, const std::string& structName) {
+    std::unique_ptr<PrototypeAST> prototype = parsePrototype(tokens, idx, structName);
+
+    if (!prototype) {
+        return nullptr;
+    }
+
+    std::unique_ptr<ScopeAST> body = parseScope(tokens, idx);
+
+    return std::make_unique<FunctionAST>(std::move(prototype), std::move(body), structName);
+}
+
 // NOLINTNEXTLINE(misc-no-recursion)
 static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, int& idx) {
 	++idx;
@@ -501,7 +566,13 @@ static std::unique_ptr<ModuleAST> parseFile(const std::vector<Token>& tokens, st
 	std::vector<std::unique_ptr<BaseASTNode>> result;
 	int idx = 0;
 	while (idx < tokens.size()) {
-		if (tokens[idx].type == TOK_EXTERN) {
+        if (tokens[idx].type == TOK_IMPL) {
+            auto impl = parseImpl(tokens, idx);
+            if (!impl) {
+                return nullptr;
+            }
+            result.push_back(std::move(impl));
+        } else if (tokens[idx].type == TOK_EXTERN) {
             idx++;
             if (tokens[idx].type != TOK_FN) {
                 compilationError(tokens[idx].line, "Expected function, got " + tokens[idx].literal);
@@ -567,12 +638,8 @@ static std::unique_ptr<StructAST> parseStruct(const std::vector<Token>& tokens, 
             return nullptr;
         }
         ++idx;
-        if (tokens[idx].type != TOK_IDENTIFIER) {
-            compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
-            return nullptr;
-        }
-        std::string memberType = tokens[idx].literal;
-        ++idx;
+        std::string memberType = parseType(tokens, idx);
+
         if (tokens[idx].type != TOK_COMMA && tokens[idx].type != TOK_RBRACE) {
             compilationError(tokens[idx].line, "Expected \",\" or \"}\", got " + tokens[idx].literal);
             return nullptr;
