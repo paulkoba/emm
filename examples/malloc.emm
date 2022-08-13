@@ -1,0 +1,26 @@
+extern fn malloc(size : i64) -> Pointer<i8>
+extern fn free(ptr : Pointer<i8>) -> void
+extern fn print_i64(n : i64) -> i64
+
+fn main() -> i64 {
+    let arr = malloc(1024) as Pointer<i64>
+
+    let idx = 2
+
+    arr[0] = 1
+    arr[1] = 1
+
+    while idx < 128 {
+        arr[idx] = arr[idx - 1] + arr[idx - 2]
+        idx = idx + 1
+    }
+
+    idx = 0
+
+    while idx < 20 {
+        print_i64(arr[idx])
+        idx = idx + 1
+    }
+
+    free(arr as Pointer<i8>)
+}

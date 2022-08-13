@@ -1,0 +1,8 @@
+fn increment_ptr(a : Pointer<i64>) -> i64 {
+    a[6] = 42
+    return a[6] + 1
+}
+
+fn main() -> i64 {
+    return 0
+}

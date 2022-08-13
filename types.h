@@ -208,7 +208,9 @@ Value buildUnaryOp(llvm::IRBuilder<>& builder, Value lhs, TokenType op) {
 Value createCast(llvm::IRBuilder<>& builder, Value value, Type* type) {
 	if (value.getType() == type) {
 		return value;
-	} else if (value.getType()->usesBuiltinOperators()) {
+	} else if(value.getType()->isPointer() && type->isPointer()) {
+        return {builder.CreatePointerCast(value.getValue(), type->getBase()), type};
+    } else if (value.getType()->usesBuiltinOperators()) {
 		if (!value.getType()->getBase()->isFloatingPointTy() && !type->getBase()->isFloatingPointTy()) {
 			if (value.getType()->usesSignedBuiltinOperators()) {
 				return {builder.CreateSExtOrTrunc(value.getValue(), type->getBase()), type};

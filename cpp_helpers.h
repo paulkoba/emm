@@ -43,6 +43,7 @@ template <typename T, typename S>
 	os << "{" << f.first << ", " << f.second << "}";
 	return os;
 }
+
 template <typename T, typename S>
 [[maybe_unused]] std::ostream& operator<<(std::ostream& os, const std::unordered_map<T, S>& f) {
 	for (const auto& i : f) {
@@ -84,6 +85,14 @@ template <typename T, typename S>
 [[maybe_unused]] std::istream& operator>>(std::istream& is, std::pair<T, S>& f) {
 	is >> f.first >> f.second;
 	return is;
+}
+
+std::vector<std::string> split(const std::string& s) {
+    std::stringstream ss(s);
+    std::istream_iterator<std::string> begin(ss);
+    std::istream_iterator<std::string> end;
+
+    return {begin, end};
 }
 
 #endif	// EMMC_CPP_HELPERS_H

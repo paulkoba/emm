@@ -1056,6 +1056,84 @@ class ModuleAST : public BaseASTNode {
 	llvm::Module *getModule() override { return module.get(); }
 };
 
+class IndexAST : public BaseASTNode {
+    std::unique_ptr<BaseASTNode> array;
+    std::unique_ptr<BaseASTNode> index;
+
+private:
+    Value getElementPtr(llvm::IRBuilder<> &builder) {
+        Value array = this->array->codegen(builder);
+        Value index = this->index->codegen(builder);
+
+        if (!array || !index) {
+            return {};
+        }
+
+        if (!array.getType()->isPointer()) {
+            compilationError("Cannot index non-pointer type " + array.getType()->getName());
+            return {};
+        }
+
+        if (!index.getType()->usesBuiltinOperators()) {
+            compilationError("Cannot index with non-integer types " + index.getType()->getName());
+            return {};
+        }
+
+        auto elementType = getTypeRegistry()->getPointedType(array.getType());
+
+        // Get the element
+        auto extracted = builder.CreateGEP(elementType->getBase(), array.getValue(), index.getValue());
+        return {extracted, elementType};
+    }
+
+public:
+    IndexAST(std::unique_ptr<BaseASTNode> array, std::unique_ptr<BaseASTNode> index)
+            : array(std::move(array)), index(std::move(index)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output = std::to_string((int64_t) this) + " [label=\"IndexAST\"]\n";
+        if (array) output += array->generateDOTHeader();
+        if (index) output += index->generateDOTHeader();
+        return output;
+    }
+
+    [[nodiscard]] std::string generateDOT() override {
+        std::string output;
+        if (array) {
+            output += std::to_string((int64_t) this) + " -> " + std::to_string((int64_t) array.get()) + "\n";
+            output += array->generateDOT();
+        }
+        if (index) {
+            output += std::to_string((int64_t) this) + " -> " + std::to_string((int64_t) index.get()) + "\n";
+            output += index->generateDOT();
+        }
+        return output;
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        auto ptr = getElementPtr(builder);
+
+        return {builder.CreateLoad(ptr.getType()->getBase(), ptr.getValue()), ptr.getType()};
+    }
+
+    Value codegenAssignment(llvm::IRBuilder<> &builder, Value val) override {
+        auto ptr = getElementPtr(builder);
+        builder.CreateStore(val.getValue(), ptr.getValue());
+        return {};
+    }
+
+    void populateParents() override {
+        if (array) {
+            array->parent = this;
+            array->populateParents();
+        }
+        if (index) {
+            index->parent = this;
+            index->populateParents();
+        }
+    }
+};
+
 std::unique_ptr<BaseASTNode> fromLiteral(const std::string &integer, const std::string &type) {
 	// TODO: There is definitely a better way to do this
 	if (type == "i8") {

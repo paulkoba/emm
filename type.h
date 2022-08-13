@@ -48,6 +48,8 @@ class Type {
         return nullptr;
     }
 
+    bool isPointer() { return base->isPointerTy(); }
+
     virtual llvm::Value* getDefaultValue(llvm::IRBuilder<>& builder) {
         if (base->isIntegerTy()) {
             return llvm::ConstantInt::get(base, 0);

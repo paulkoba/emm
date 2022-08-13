@@ -16,6 +16,44 @@ static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& i
 static std::unique_ptr<StructAST> parseStruct(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<BaseASTNode> parseExpression(const std::vector<Token>& tokens, int& idx);
 
+// NOLINTNEXTLINE(misc-no-recursion)
+static std::string parseType(const std::vector<Token>& tokens, int& idx) {
+    if (tokens[idx].type != TOK_IDENTIFIER) {
+        return "";
+    }
+    std::string type = tokens[idx].literal;
+    idx++;
+
+    if (tokens[idx].type != TOK_LESS) {
+        return type;
+    }
+
+    idx++;
+
+    std::vector<std::string> args;
+    while (tokens[idx].type != TOK_GREATER) {
+        args.push_back(parseType(tokens, idx));
+
+        if (tokens[idx].type != TOK_GREATER) {
+            if (tokens[idx].type != TOK_COMMA) {
+                compilationError("Expected ',' or '>'");
+                return "";
+            }
+            idx++;
+        }
+    }
+    idx++;
+
+    type += " < ";
+    for (int i = 0; i < args.size(); i++) {
+        type += args[i];
+        type += " ";
+    }
+    type += "> ";
+
+    return type;
+}
+
 static int getTokenPrecedence(TokenType token) {
 	switch (token) {
         case TOK_ASSIGN:
@@ -37,6 +75,7 @@ static int getTokenPrecedence(TokenType token) {
         case TOK_AS:
             return 40;
         case TOK_DOT:
+        case TOK_LBRACKET:
             return 50;
 		default:
 			return -1;
@@ -134,15 +173,26 @@ static std::unique_ptr<BaseASTNode> parseUnary(const std::vector<Token>& tokens,
 static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& tokens, int& idx,
 												  std::unique_ptr<BaseASTNode> left, int precedence) {
     while (true) {
-        if (tokens[idx].type == TOK_AS) {
+        if (tokens[idx].type == TOK_LBRACKET) {
             ++idx;
-            if (tokens[idx].type != TOK_IDENTIFIER) {
-                compilationError(tokens[idx].line, "Expected type name, got: " + tokens[idx].literal);
+            auto expr = parseExpression(tokens, idx);
+
+            if (!expr) return expr;
+
+            if (tokens[idx].type != TOK_RBRACKET) {
+                compilationError(tokens[idx].line, "Expected ']', got: " + tokens[idx].literal);
                 return nullptr;
             }
-            auto type = tokens[idx].literal;
-            ++idx;
 
+            ++idx;
+            left = std::make_unique<IndexAST>(std::move(left), std::move(expr));
+
+            continue;
+        }
+
+        if (tokens[idx].type == TOK_AS) {
+            ++idx;
+            auto type = parseType(tokens, idx);
             left = std::make_unique<AsAST>(std::move(left), type);
             continue;
         }
@@ -217,12 +267,11 @@ static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& to
 		}
 		++idx;
 
-		if (tokens[idx].type != TOK_IDENTIFIER) {
-			compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
-			return nullptr;
-		}
-		nextPair.second = tokens[idx].literal;
-		++idx;
+		nextPair.second = parseType(tokens, idx);
+        if (nextPair.second.empty()) {
+            compilationError(tokens[idx].line, "Expected type, got " + tokens[idx].literal);
+            return nullptr;
+        }
 
 		args.push_back(nextPair);
 
@@ -237,12 +286,7 @@ static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& to
 	}
 	++idx;
 
-	if (tokens[idx].type != TOK_IDENTIFIER) {
-		compilationError(tokens[idx].line, "Expected return type , got " + tokens[idx].literal);
-		return nullptr;
-	}
-	std::string returnType = tokens[idx].literal;
-	++idx;
+	std::string returnType = parseType(tokens, idx);
 
 	return std::make_unique<PrototypeAST>(name, returnType, args);
 }
@@ -340,7 +384,7 @@ static std::unique_ptr<WhileAST> parseWhile(const std::vector<Token>& tokens, in
 }
 
 static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& tokens, int& idx) {
-	std::unique_ptr<PrototypeAST> prototype = parsePrototype(tokens, idx);
+    std::unique_ptr<PrototypeAST> prototype = parsePrototype(tokens, idx);
 
 	if (!prototype) {
 		return nullptr;
@@ -423,12 +467,7 @@ static std::unique_ptr<ReturnAST> parseReturn(const std::vector<Token>& tokens, 
 }
 
 static std::unique_ptr<LetAST> parseLet(const std::vector<Token>& tokens, int& idx) {
-	if (tokens[idx].type != TOK_IDENTIFIER) {
-		compilationError(tokens[idx].line, "Expected identifier, got " + tokens[idx].literal);
-		return nullptr;
-	}
-	std::string name = tokens[idx].literal;
-	++idx;
+	std::string name = parseType(tokens, idx);
 
 	bool typeSpecified = false;
 
