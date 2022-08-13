@@ -40,7 +40,7 @@ class TypeRegistry {
 
 	void registerType(Type* type) { types[type->getName()] = type; }
 
-    // TODO: Pointer logic should definitely be located here
+    // TODO: Pointer logic definitely should not be located here
 	[[nodiscard]] Type* getType(const std::string& name) {
         auto parts = split(name);
 

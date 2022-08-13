@@ -251,7 +251,7 @@ static std::unique_ptr<BaseASTNode> parseBinaryOp(const std::vector<Token>& toke
             if (tokens[idx].type == TOK_LPAREN) {
                 auto args = parseArgList(tokens, ++idx);
                 args.insert(args.begin(), std::move(left));
-                left = std::make_unique<CallExprAST>(member, std::move(args));
+                left = std::make_unique<StructCallExprAST>(member, std::move(args));
                 continue;
             } else {
                 left = std::make_unique<MemberAST>(member, std::move(left));

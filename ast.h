@@ -44,6 +44,11 @@ class BaseASTNode {
         return {};
     }
 
+    virtual Value codegenPtr(llvm::IRBuilder<> &builder) {
+        compilationError("Cannot perform pointer codegen on this node");
+        return {};
+    }
+
 	virtual void populateParents() {
 		// Do nothing
 	}
@@ -200,7 +205,6 @@ class VariableAST : public BaseASTNode {
 
 			return {builder.CreateLoad(llvmType->getBase(), var->value.getValue()), var->value.getType()};
 		}
-        logVariables();
 
 		compilationError("Variable " + name + " not found");
 		return {};
@@ -209,10 +213,19 @@ class VariableAST : public BaseASTNode {
     Value codegenAssignment(llvm::IRBuilder<> &builder, Value rhs) override {
         auto lhs = codegen(builder);
         if (!lhs) return {};
-
+        // FIXME: I have no idea how it works
         auto result = builder.CreateStore(rhs.getValue(),
                                      llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand());
         return {result, lhs.getType()};
+    }
+
+    Value codegenPtr(llvm::IRBuilder<> &builder) override {
+        auto var = getVariableFromNearestScope(name);
+        if (!var) {
+            compilationError("Variable " + name + " not found");
+            return {};
+        }
+        return {var->value.getValue(), var->value.getType()};
     }
 };
 
@@ -364,7 +377,7 @@ class AsAST : public BaseASTNode {
 class CallExprAST : public BaseASTNode {
 	std::string name;
 	std::vector<std::unique_ptr<BaseASTNode>> args;
-
+    friend class StructCallExprAST;
    public:
 	CallExprAST(std::string name, std::vector<std::unique_ptr<BaseASTNode>> args)
 		: name(std::move(name)), args(std::move(args)) {}
@@ -406,6 +419,33 @@ class CallExprAST : public BaseASTNode {
 		}
 		return {builder.CreateCall(func, oArgs), getFunction(func)->getReturnType()};
 	}
+};
+
+class StructCallExprAST : public CallExprAST {
+public:
+    StructCallExprAST(std::string name, std::vector<std::unique_ptr<BaseASTNode>> args)
+            : CallExprAST(std::move(name), std::move(args)) {}
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        auto func = getModule()->getFunction(name);
+        if (!func) {
+            compilationError("Function " + name + " not found");
+            return {};
+        }
+
+        bool skip = true;
+        std::vector<llvm::Value *> oArgs;
+        for (const auto &arg : args) {
+            if(skip) {
+                skip = false;
+                oArgs.push_back(arg->codegenPtr(builder).getValue());
+                continue;
+            }
+            oArgs.push_back(arg->codegen(builder).getValue());
+        }
+
+        return {builder.CreateCall(func, oArgs), getFunction(func)->getReturnType()};
+    }
 };
 
 class PrototypeAST : public BaseASTNode {
@@ -602,7 +642,6 @@ class FunctionAST : public BaseASTNode {
 
 			++idx;
 		}
-        std::cerr << "HERE1" << std::endl;
 
 		// Allocate space for return value
 		if (proto->returnType != "void") {
@@ -626,7 +665,7 @@ class FunctionAST : public BaseASTNode {
 		} else {
 			builder.CreateRetVoid();
 		}
-        std::cerr << "HERE2" << std::endl;
+
 		return {};
 	}
 
@@ -995,7 +1034,6 @@ public:
 
         if(result.getType()->usesBuiltinOperators()) {
             compilationError("Cannot use member operator on type " + result.getType()->getName());
-            logVariables();
             return {};
         }
 
@@ -1023,6 +1061,22 @@ public:
 
         // Store the value in the alloca
         return value->codegenAssignment(builder, {inserted, result.getType()->getMemberType(name)});
+    }
+
+    Value codegenPtr(llvm::IRBuilder<> &builder) override {
+        Value result = value->codegen(builder);
+
+        if(result.getType()->usesBuiltinOperators()) {
+            compilationError("Cannot use member operator on type " + result.getType()->getName());
+            return {};
+        }
+
+        auto offset = result.getType()->getMemberOffset(name);
+
+        // Get pointer to the member
+        auto ptr = builder.CreateStructGEP(result.getType()->getBase(), result.getValue(), offset);
+
+        return {ptr, result.getType()->getMemberType(name)};
     }
 
     void populateParents() override {
