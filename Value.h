@@ -5,7 +5,7 @@
 #ifndef EMMC_VALUE_H
 #define EMMC_VALUE_H
 
-#include "type.h"
+#include "Type.h"
 
 class Value {
 	llvm::Value* value = nullptr;

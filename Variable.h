@@ -5,7 +5,7 @@
 #ifndef EMMC_VARIABLE_H
 #define EMMC_VARIABLE_H
 
-#include "value.h"
+#include "Value.h"
 
 class Variable {
    public:

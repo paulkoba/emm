@@ -2,8 +2,8 @@
 // Created by fail on 7/25/22.
 //
 
-#ifndef EMMC_CPP_HELPERS_H
-#define EMMC_CPP_HELPERS_H
+#ifndef EMMC_CPPHELPERS_H
+#define EMMC_CPPHELPERS_H
 
 #include <algorithm>
 #include <array>
@@ -95,4 +95,4 @@ std::vector<std::string> split(const std::string& s) {
     return {begin, end};
 }
 
-#endif	// EMMC_CPP_HELPERS_H
+#endif    // EMMC_CPPHELPERS_H

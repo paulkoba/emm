@@ -5,7 +5,7 @@
 #ifndef EMMC_AST_H
 #define EMMC_AST_H
 
-#include "types.h"
+#include "Types.h"
 
 class SignedIntAST : public BaseASTNode {
 	int64_t value;

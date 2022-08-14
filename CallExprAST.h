@@ -2,10 +2,10 @@
 // Created by fail on 8/14/22.
 //
 
-#ifndef EMMC_CALL_EXPR_AST_H
-#define EMMC_CALL_EXPR_AST_H
+#ifndef EMMC_CALLEXPRAST_H
+#define EMMC_CALLEXPRAST_H
 
-#include "base_ast_node.h"
+#include "BaseASTNode.h"
 
 class CallExprAST : public BaseASTNode {
     std::string name;
@@ -102,4 +102,4 @@ public:
     }
 };
 
-#endif //EMMC_CALL_EXPR_AST_H
+#endif //EMMC_CALLEXPRAST_H

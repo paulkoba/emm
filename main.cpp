@@ -1,17 +1,17 @@
 #include <fstream>
 #include <iostream>
 
-#include "compilation.h"
-#include "cpp_helpers.h"
-#include "lexer.h"
+#include "Compilation.h"
+#include "CPPHelpers.h"
+#include "Lexer.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
-#include "optimization_passes.h"
-#include "parser.h"
+#include "OptimizationPasses.h"
+#include "Parser.h"
 
 int main() {
 	std::ifstream input("../examples/operator_overloading.emm");

@@ -2,8 +2,8 @@
 // Created by fail on 8/14/22.
 //
 
-#ifndef EMMC_BASE_AST_NODE_H
-#define EMMC_BASE_AST_NODE_H
+#ifndef EMMC_BASEASTNODE_H
+#define EMMC_BASEASTNODE_H
 
 #include <llvm/IR/Constants.h>
 #include <llvm/IR/LLVMContext.h>
@@ -15,11 +15,11 @@
 #include <utility>
 #include <vector>
 
-#include "function.h"
-#include "token.h"
-#include "type_registry.h"
-#include "types.h"
-#include "variable.h"
+#include "Function.h"
+#include "Token.h"
+#include "TypeRegistry.h"
+#include "Types.h"
+#include "Variable.h"
 
 class BaseASTNode {
 public:
@@ -124,4 +124,4 @@ public:
     }
 };
 
-#endif //EMMC_BASE_AST_NODE_H
+#endif //EMMC_BASEASTNODE_H

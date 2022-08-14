@@ -2,11 +2,11 @@
 // Created by fail on 8/1/22.
 //
 
-#ifndef EMMC_TYPE_REGISTRY_H
-#define EMMC_TYPE_REGISTRY_H
+#ifndef EMMC_TYPEREGISTRY_H
+#define EMMC_TYPEREGISTRY_H
 
-#include "type.h"
-#include "cpp_helpers.h"
+#include "Type.h"
+#include "CPPHelpers.h"
 /*
  * This class is used to register types.
  * Types cannot be registered twice under the same name.
@@ -110,4 +110,4 @@ std::unique_ptr<TypeRegistry> typeRegistry = nullptr;
 // This will need to be part of ModuleAST, but I left it as a static function for now
 TypeRegistry* getTypeRegistry() { return typeRegistry.get(); }
 
-#endif	// EMMC_TYPE_REGISTRY_H
+#endif    // EMMC_TYPEREGISTRY_H

@@ -5,9 +5,9 @@
 #ifndef EMMC_PARSER_H
 #define EMMC_PARSER_H
 
-#include "ast.h"
-#include "logging.h"
-#include "token.h"
+#include "AST.h"
+#include "Logging.h"
+#include "Token.h"
 
 static std::unique_ptr<IfAST> parseCondition(const std::vector<Token>& tokens, int& idx);
 static std::unique_ptr<WhileAST> parseWhile(const std::vector<Token>& tokens, int& idx);

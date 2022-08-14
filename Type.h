@@ -12,7 +12,7 @@
 
 #include <utility>
 
-#include "logging.h"
+#include "Logging.h"
 
 class Type {
 	llvm::Type* base = nullptr;	 // Most of the functionality is directly derived from this

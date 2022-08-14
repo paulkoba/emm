@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "token.h"
+#include "Token.h"
 
 enum LexerState {
 	LEXER_STATE_START,

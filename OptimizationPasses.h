@@ -2,8 +2,8 @@
 // Created by fail on 7/27/22.
 //
 
-#ifndef EMMC_OPTIMIZATION_PASSES_H
-#define EMMC_OPTIMIZATION_PASSES_H
+#ifndef EMMC_OPTIMIZATIONPASSES_H
+#define EMMC_OPTIMIZATIONPASSES_H
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
@@ -37,4 +37,4 @@ void optimizeModule(llvm::Module& module) {
 	MPM.run(module, MAM);
 }
 
-#endif	// EMMC_OPTIMIZATION_PASSES_H
+#endif    // EMMC_OPTIMIZATIONPASSES_H

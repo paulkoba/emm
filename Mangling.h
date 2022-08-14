@@ -8,10 +8,10 @@
 #include <vector>
 #include <string>
 
-#include "value.h"
-#include "type.h"
-#include "type_registry.h"
-#include "token.h"
+#include "Value.h"
+#include "Type.h"
+#include "TypeRegistry.h"
+#include "Token.h"
 
 std::string mangle(const std::string &name, const std::vector<std::string> &types) {
     std::string mangledName = "_E" + std::to_string(name.size()) + name;

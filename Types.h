@@ -12,13 +12,13 @@
 
 #include <string>
 
-#include "logging.h"
-#include "token.h"
-#include "type_registry.h"
-#include "value.h"
-#include "mangling.h"
+#include "Logging.h"
+#include "Token.h"
+#include "TypeRegistry.h"
+#include "Value.h"
+#include "Mangling.h"
 
-#include "call_expr_ast.h"
+#include "CallExprAST.h"
 
 static Value buildBuiltinIntegerBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType op) {
 	llvm::Value* result = nullptr;

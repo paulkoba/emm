@@ -5,8 +5,8 @@
 #ifndef EMMC_FUNCTION_H
 #define EMMC_FUNCTION_H
 
-#include "type.h"
-#include "variable.h"
+#include "Type.h"
+#include "Variable.h"
 
 class Function {
 	llvm::Function* function = nullptr;

@@ -24,4 +24,4 @@ link_libraries(${LIBS} ${SYS_LIBS} ${LDF})
 execute_process(COMMAND llvm-config --cxxflags OUTPUT_VARIABLE CMAKE_CXX_FLAGS)
 string(STRIP ${CMAKE_CXX_FLAGS} CMAKE_CXX_FLAGS)
 
-add_executable(emmc main.cpp token.h lexer.h cpp_helpers.h ast.h parser.h logging.h types.h optimization_passes.h compilation.h compilation.h type.h value.h type_registry.h function.h variable.h mangling.h base_ast_node.h call_expr_ast.h)
+add_executable(emmc main.cpp Token.h Lexer.h CPPHelpers.h AST.h Parser.h Logging.h Types.h OptimizationPasses.h Compilation.h Compilation.h Type.h Value.h TypeRegistry.h Function.h Variable.h Mangling.h BaseASTNode.h CallExprAST.h)
