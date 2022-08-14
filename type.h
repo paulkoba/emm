@@ -62,6 +62,15 @@ class Type {
             return nullptr;
         }
     }
+
+    std::string getMangledName() {
+        std::string mangledName = name;
+        std::replace(mangledName.begin(), mangledName.end(), ' ', '_');
+        std::replace(mangledName.begin(), mangledName.end(), '<', '_');
+        std::replace(mangledName.begin(), mangledName.end(), '>', '_');
+
+        return std::to_string(mangledName.size()) + mangledName;
+    }
 };
 
 class StructType : public Type {

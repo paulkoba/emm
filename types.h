@@ -16,6 +16,9 @@
 #include "token.h"
 #include "type_registry.h"
 #include "value.h"
+#include "mangling.h"
+
+#include "call_expr_ast.h"
 
 static Value buildBuiltinIntegerBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType op) {
 	llvm::Value* result = nullptr;
@@ -187,12 +190,17 @@ Value buildBuiltinUnaryOp(llvm::IRBuilder<>& builder, Value operand, TokenType o
     }
 }
 
-Value buildBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType op) {
+Value buildBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType op, BaseASTNode* parent = nullptr) {
 	if (lhs.getType()->usesBuiltinOperators() && rhs.getType()->usesBuiltinOperators()) {
 		return buildBuiltinBinaryOp(builder, lhs, rhs, op);
 	} else {
-		compilationError("buildBinaryOp: Not yet implemented.");
-		return {nullptr, nullptr};
+        auto binaryOpName = getBinaryOpName(lhs, rhs, op);
+        auto vec = std::vector<std::unique_ptr<BaseASTNode>>();
+        vec.push_back(std::make_unique<HelperASTNode>(lhs));
+        vec.push_back(std::make_unique<HelperASTNode>(rhs));
+        auto structCallExpr = std::make_unique<CallExprAST>(binaryOpName, std::move(vec));
+        structCallExpr->parent = parent;
+        return structCallExpr->codegen(builder);
 	}
 }
 

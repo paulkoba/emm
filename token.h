@@ -69,6 +69,25 @@ TokenType tryMatchKeyword(const std::string& input) {
 	return keywords.count(input) ? keywords[input] : TOK_NONE;
 }
 
+std::string functionNameFromTokenType(TokenType op) {
+    switch (op) {
+        case TOK_PLUS: return "operator_add";
+        case TOK_MINUS: return "operator_sub";
+        case TOK_PRODUCT: return "operator_mul";
+        case TOK_DIVISION: return "operator_div";
+        case TOK_MODULO: return "operator_mod";
+        case TOK_EQUALS: return "operator_equals";
+        case TOK_ASSIGN: return "operator_assign";
+        case TOK_GREATER: return "operator_greater";
+        case TOK_LESS: return "operator_less";
+        case TOK_LESS_OR_EQUAL: return "operator_less_or_equal";
+        case TOK_GREATER_OR_EQUAL: return "operator_greater_or_equal";
+        case TOK_NOT_EQUALS: return "operator_not_equals";
+
+        default: return "operator_unknown";
+    }
+}
+
 TokenType getTrivialTokenType(char ch) {
 	switch (ch) {
 		case '+':

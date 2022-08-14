@@ -341,7 +341,7 @@ static std::unique_ptr<PrototypeAST> parsePrototype(const std::vector<Token>& to
 
 	std::string returnType = parseType(tokens, idx);
 
-	return std::make_unique<PrototypeAST>(name, returnType, args);
+	return std::make_unique<PrototypeAST>(name, returnType, args, !structName.empty());
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
@@ -457,7 +457,7 @@ static std::unique_ptr<FunctionAST> parseFunction(const std::vector<Token>& toke
 
     std::unique_ptr<ScopeAST> body = parseScope(tokens, idx);
 
-    return std::make_unique<FunctionAST>(std::move(prototype), std::move(body), structName);
+    return std::make_unique<FunctionAST>(std::move(prototype), std::move(body), structName, !structName.empty());
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)

@@ -5,118 +5,7 @@
 #ifndef EMMC_AST_H
 #define EMMC_AST_H
 
-#include <llvm/IR/Constants.h>
-#include <llvm/IR/LLVMContext.h>
-#include <llvm/IR/Value.h>
-
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "function.h"
-#include "token.h"
-#include "type_registry.h"
 #include "types.h"
-#include "variable.h"
-
-class BaseASTNode {
-   public:
-	BaseASTNode *parent = nullptr;
-
-   public:
-	virtual ~BaseASTNode() = default;
-
-	[[nodiscard]] virtual std::string generateDOTHeader() const {
-		return std::to_string((int64_t)this) + " [label=\"BaseASTNode\"]\n";
-	}
-
-	virtual std::string generateDOT() { return ""; }
-
-	virtual Value codegen(llvm::IRBuilder<> &builder) {
-        compilationError("Cannot perform codegen on this node");
-        return {};
-    }
-
-    virtual Value codegenAssignment(llvm::IRBuilder<> &builder, Value value) {
-        compilationError("Cannot perform assignment codegen on this node");
-        return {};
-    }
-
-    virtual Value codegenPtr(llvm::IRBuilder<> &builder) {
-        compilationError("Cannot perform pointer codegen on this node");
-        return {};
-    }
-
-	virtual void populateParents() {
-		// Do nothing
-	}
-
-	// NOLINTNEXTLINE(misc-no-recursion)
-	virtual void createVariableInNearestScope(Variable variable) {
-		if (parent) {
-			parent->createVariableInNearestScope(std::move(variable));
-		}
-	}
-
-	// NOLINTNEXTLINE(misc-no-recursion)
-	virtual Variable *getVariableFromNearestScope(const std::string &name) {
-		if (parent) {
-			return parent->getVariableFromNearestScope(name);
-		}
-
-		return nullptr;
-	}
-
-	// NOLINTNEXTLINE(misc-no-recursion)
-	virtual llvm::Module *getModule() {
-		if (parent) {
-			return parent->getModule();
-		} else {
-			return nullptr;
-		}
-	}
-
-	// NOLINTNEXTLINE(misc-no-recursion)
-	virtual llvm::Value *getReturnValue() {
-		if (parent) {
-			return parent->getReturnValue();
-		} else {
-			return nullptr;
-		}
-	}
-
-	// NOLINTNEXTLINE(misc-no-recursion)
-	virtual llvm::BasicBlock *getReturnBlock() {
-		if (parent) {
-			return parent->getReturnBlock();
-		} else {
-			return nullptr;
-		}
-	}
-
-	virtual bool alwaysReturns() { return false; }
-
-    // NOLINTNEXTLINE(misc-no-recursion)
-    virtual void logVariables() {
-        std::cerr << "--- Not scope \n";
-        if(parent) {
-            parent->logVariables();
-        }
-    }
-};
-
-class HelperASTNode : public BaseASTNode {
-private:
-    Value value;
-public:
-    HelperASTNode(Value value) : value(value) {}
-    virtual ~HelperASTNode() = default;
-    virtual Value codegen(llvm::IRBuilder<> &builder) override {
-        return value;
-    }
-};
 
 class SignedIntAST : public BaseASTNode {
 	int64_t value;
@@ -275,9 +164,20 @@ class BinaryExprAST : public BaseASTNode {
 
             if (!lhsValue || !rhsValue) return {};
 
-            auto r = buildBinaryOp(builder, lhsValue, rhsValue, op);
+            if(!lhsValue.getType()->usesBuiltinOperators() || !rhsValue.getType()->usesBuiltinOperators()) {
+                // Get ptr to lhs
+                auto lhsPtr = lhsValue.getValue();
+                auto alloc = builder.CreateAlloca(lhsValue.getType()->getBase());
+                builder.CreateStore(lhsPtr, alloc);
 
-            return r;
+                auto r = buildBinaryOp(builder, {alloc, getTypeRegistry()->getPointerType(lhsValue.getType())}, rhsValue, op, this);
+
+                return r;
+            } else {
+                auto r = buildBinaryOp(builder, lhsValue, rhsValue, op);
+
+                return r;
+            }
         } else {
             auto rhsValue = rhs->codegen(builder);
 
@@ -374,89 +274,16 @@ class AsAST : public BaseASTNode {
 	}
 };
 
-class CallExprAST : public BaseASTNode {
-	std::string name;
-	std::vector<std::unique_ptr<BaseASTNode>> args;
-    friend class StructCallExprAST;
-   public:
-	CallExprAST(std::string name, std::vector<std::unique_ptr<BaseASTNode>> args)
-		: name(std::move(name)), args(std::move(args)) {}
-
-	[[nodiscard]] std::string generateDOTHeader() const override {
-		std::string output;
-		for (const auto &arg : args) {
-			output += arg->generateDOTHeader();
-		}
-		return output + std::to_string((int64_t)this) + " [label=\"CallExprAST\"]\n";
-	}
-
-	std::string generateDOT() override {
-		std::string output;
-		for (const auto &arg : args) {
-			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)arg.get()) + "\n";
-			output += arg->generateDOT();
-		}
-		return output;
-	}
-
-	void populateParents() override {
-		for (const auto &arg : args) {
-			arg->parent = this;
-			arg->populateParents();
-		}
-	}
-
-	Value codegen(llvm::IRBuilder<> &builder) override {
-		auto func = getModule()->getFunction(name);
-		if (!func) {
-			compilationError("Function " + name + " not found");
-			return {};
-		}
-
-		std::vector<llvm::Value *> oArgs;
-		for (const auto &arg : args) {
-			oArgs.push_back(arg->codegen(builder).getValue());
-		}
-		return {builder.CreateCall(func, oArgs), getFunction(func)->getReturnType()};
-	}
-};
-
-class StructCallExprAST : public CallExprAST {
-public:
-    StructCallExprAST(std::string name, std::vector<std::unique_ptr<BaseASTNode>> args)
-            : CallExprAST(std::move(name), std::move(args)) {}
-
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        auto func = getModule()->getFunction(name);
-        if (!func) {
-            compilationError("Function " + name + " not found");
-            return {};
-        }
-
-        bool skip = true;
-        std::vector<llvm::Value *> oArgs;
-        for (const auto &arg : args) {
-            if(skip) {
-                skip = false;
-                oArgs.push_back(arg->codegenPtr(builder).getValue());
-                continue;
-            }
-            oArgs.push_back(arg->codegen(builder).getValue());
-        }
-
-        return {builder.CreateCall(func, oArgs), getFunction(func)->getReturnType()};
-    }
-};
-
 class PrototypeAST : public BaseASTNode {
 	std::string name;
 	std::string returnType;
 	std::vector<std::pair<std::string, std::string>> args;	// Name:Type Pairs
+    bool shouldMangle;
 	friend class FunctionAST;
 
    public:
-	PrototypeAST(std::string name, std::string returnType, std::vector<std::pair<std::string, std::string>> args)
-		: name(std::move(name)), returnType(std::move(returnType)), args(std::move(args)) {}
+	PrototypeAST(std::string name, std::string returnType, std::vector<std::pair<std::string, std::string>> args, bool shouldMangle = false)
+		: name(std::move(name)), returnType(std::move(returnType)), args(std::move(args)), shouldMangle(shouldMangle) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
 		std::string output = std::to_string((int64_t)this) + " [label=\"PrototypeAST " + name + "; Args: ";
@@ -472,11 +299,19 @@ class PrototypeAST : public BaseASTNode {
 
 	Value codegen(llvm::IRBuilder<> &builder) override {
 		std::vector<llvm::Type *> argTypes;
+        std::vector<std::string> argTypesNames;
+
 		auto registry = getTypeRegistry();
 		auto rtype = registry->getType(returnType);
+
 		for (const auto &arg : args) {
 			argTypes.push_back(registry->getType(arg.second)->getBase());
+            argTypesNames.push_back(arg.second);
 		}
+
+        if(shouldMangle) {
+            name = mangle(name, argTypesNames);
+        }
 
 		llvm::FunctionType *functionType = llvm::FunctionType::get(rtype->getBase(), argTypes, false);
 		llvm::Function *function =
@@ -574,15 +409,14 @@ class FunctionAST : public BaseASTNode {
 	std::unique_ptr<ScopeAST> body;
 
     std::string structName;
-
 	Value returnValue;
 	llvm::BasicBlock *returnBlock = nullptr;
 
    public:
-	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
+	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, bool shouldMangle = false)
 		: proto(std::move(proto)), body(std::move(body)) {}
 
-    FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, std::string structName)
+    FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, std::string structName, bool shouldMangle = false)
             : proto(std::move(proto)), body(std::move(body)), structName(std::move(structName)) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -1135,27 +969,27 @@ class IndexAST : public BaseASTNode {
 
 private:
     Value getElementPtr(llvm::IRBuilder<> &builder) {
-        Value array = this->array->codegen(builder);
-        Value index = this->index->codegen(builder);
+        Value arrayVal = array->codegen(builder);
+        Value IndexVal = index->codegen(builder);
 
-        if (!array || !index) {
+        if (!arrayVal || !IndexVal) {
             return {};
         }
 
-        if (!array.getType()->isPointer()) {
-            compilationError("Cannot index non-pointer type " + array.getType()->getName());
+        if (!arrayVal.getType()->isPointer()) {
+            compilationError("Cannot IndexVal non-pointer type " + arrayVal.getType()->getName());
             return {};
         }
 
-        if (!index.getType()->usesBuiltinOperators()) {
-            compilationError("Cannot index with non-integer types " + index.getType()->getName());
+        if (!IndexVal.getType()->usesBuiltinOperators()) {
+            compilationError("Cannot IndexVal with non-integer types " + IndexVal.getType()->getName());
             return {};
         }
 
-        auto elementType = getTypeRegistry()->getPointedType(array.getType());
+        auto elementType = getTypeRegistry()->getPointedType(arrayVal.getType());
 
         // Get the element
-        auto extracted = builder.CreateGEP(elementType->getBase(), array.getValue(), index.getValue());
+        auto extracted = builder.CreateGEP(elementType->getBase(), arrayVal.getValue(), IndexVal.getValue());
         return {extracted, elementType};
     }
 

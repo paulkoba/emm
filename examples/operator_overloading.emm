@@ -1,0 +1,25 @@
+extern fn print_i64(n : i64) -> i64
+
+struct FunnyInt {
+    a : i64,
+}
+
+impl FunnyInt {
+    fn operator_add(other : FunnyInt) -> FunnyInt {
+        let output = FunnyInt()
+        output.a = self.a + other.a
+        return output
+    }
+}
+
+fn main() -> i64 {
+    let a : FunnyInt = FunnyInt()
+    let b : FunnyInt = FunnyInt()
+    a.a = 42
+    b.a = 1337
+
+    let c = a + b
+
+    print_i64(c.a)
+    return 0
+}
