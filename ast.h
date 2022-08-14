@@ -164,6 +164,7 @@ class BinaryExprAST : public BaseASTNode {
 
             if (!lhsValue || !rhsValue) return {};
 
+            // TODO: Check if operator actually exists. Now it just segfaults if it doesn't
             if(!lhsValue.getType()->usesBuiltinOperators() || !rhsValue.getType()->usesBuiltinOperators()) {
                 // Get ptr to lhs
                 auto lhsPtr = lhsValue.getValue();

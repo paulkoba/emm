@@ -10,13 +10,17 @@ impl FunnyInt {
         output.a = self.a + other.a
         return output
     }
+
+    fn set_a(a : i64) -> void {
+        self.a = a
+    }
 }
 
 fn main() -> i64 {
     let a : FunnyInt = FunnyInt()
     let b : FunnyInt = FunnyInt()
     a.a = 42
-    b.a = 1337
+    b.set_a(1337)
 
     let c = a + b
 
