@@ -8,7 +8,6 @@ set(CMAKE_C_COMPILER clang)
 set(CMAKE_CXX_COMPILER clang++)
 
 add_compile_options(-g)
-add_compile_options(-rdynamic)
 
 link_libraries()
 execute_process(COMMAND llvm-config --libs OUTPUT_VARIABLE LIBS)
@@ -24,4 +23,4 @@ link_libraries(${LIBS} ${SYS_LIBS} ${LDF})
 execute_process(COMMAND llvm-config --cxxflags OUTPUT_VARIABLE CMAKE_CXX_FLAGS)
 string(STRIP ${CMAKE_CXX_FLAGS} CMAKE_CXX_FLAGS)
 
-add_executable(emmc main.cpp Token.h Lexer.h CPPHelpers.h AST.h Parser.h Logging.h Types.h OptimizationPasses.h Compilation.h Compilation.h Type.h Value.h TypeRegistry.h Function.h Variable.h Mangling.h BaseASTNode.h CallExprAST.h)
+add_executable(emmc main.cpp Lex/RawLexer.h Basic/CPPHelpers.h AST/AST.h Parser.h Basic/Logging.h Types.h OptimizationPasses.h Compilation.h Compilation.h Type.h Value.h TypeRegistry.h Function.h Variable.h Mangling.h AST/BaseASTNode.h AST/CallExprAST.h Parse/Parser.h Lex/Lexer.h Lex/TokenTypes.h Basic/EnumMagic.h Lex/Token.h)

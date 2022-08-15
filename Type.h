@@ -12,7 +12,7 @@
 
 #include <utility>
 
-#include "Logging.h"
+#include "Basic/Logging.h"
 
 class Type {
 	llvm::Type* base = nullptr;	 // Most of the functionality is directly derived from this
@@ -31,73 +31,73 @@ class Type {
 		  useBuiltinOperators(useBuiltinOperators),
 		  signedBuiltinOperators(signedBuiltinOperators) {}
 
-    virtual ~Type() = default;
+	virtual ~Type() = default;
 
 	[[nodiscard]] llvm::Type* getBase() { return base; }
 	[[nodiscard]] const std::string& getName() const { return name; }
 	[[nodiscard]] bool usesBuiltinOperators() const { return useBuiltinOperators; }
 	[[nodiscard]] bool usesSignedBuiltinOperators() const { return signedBuiltinOperators; }
 
-    [[nodiscard]] virtual std::size_t getMemberOffset(const std::string& memberName) {
-        compilationError("Cannot get member offset of type " + name);
-        return 0;
-    }
+	[[nodiscard]] virtual std::size_t getMemberOffset(const std::string& memberName) {
+		compilationError("Cannot get member offset of type " + name);
+		return 0;
+	}
 
-    [[nodiscard]] virtual Type* getMemberType(const std::string& memberName) {
-        compilationError("Cannot get member type of type " + memberName);
-        return nullptr;
-    }
+	[[nodiscard]] virtual Type* getMemberType(const std::string& memberName) {
+		compilationError("Cannot get member type of type " + memberName);
+		return nullptr;
+	}
 
-    bool isPointer() { return base->isPointerTy(); }
+	bool isPointer() { return base->isPointerTy(); }
 
-    virtual llvm::Value* getDefaultValue(llvm::IRBuilder<>& builder) {
-        if (base->isIntegerTy()) {
-            return llvm::ConstantInt::get(base, 0);
-        } else if (base->isFloatTy()) {
-            return llvm::ConstantFP::get(base, 0);
-        } else if (base->isPointerTy()) {
-            return llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(base));
-        } else {
-            compilationError("Cannot get default value of type " + getName());
-            return nullptr;
-        }
-    }
+	virtual llvm::Value* getDefaultValue(llvm::IRBuilder<>& builder) {
+		if (base->isIntegerTy()) {
+			return llvm::ConstantInt::get(base, 0);
+		} else if (base->isFloatTy()) {
+			return llvm::ConstantFP::get(base, 0);
+		} else if (base->isPointerTy()) {
+			return llvm::ConstantPointerNull::get(llvm::cast<llvm::PointerType>(base));
+		} else {
+			compilationError("Cannot get default value of type " + getName());
+			return nullptr;
+		}
+	}
 
-    std::string getMangledName() {
-        std::string mangledName = name;
-        std::replace(mangledName.begin(), mangledName.end(), ' ', '_');
-        std::replace(mangledName.begin(), mangledName.end(), '<', '_');
-        std::replace(mangledName.begin(), mangledName.end(), '>', '_');
+	std::string getMangledName() {
+		std::string mangledName = name;
+		std::replace(mangledName.begin(), mangledName.end(), ' ', '_');
+		std::replace(mangledName.begin(), mangledName.end(), '<', '_');
+		std::replace(mangledName.begin(), mangledName.end(), '>', '_');
 
-        return std::to_string(mangledName.size()) + mangledName;
-    }
+		return std::to_string(mangledName.size()) + mangledName;
+	}
 };
 
 class StructType : public Type {
-    std::map<std::string, std::size_t> memberOffsets;
-    std::map<std::string, Type*> memberTypes;
+	std::map<std::string, std::size_t> memberOffsets;
+	std::map<std::string, Type*> memberTypes;
 
-    friend class StructAST;
-public:
-    StructType(llvm::Type* base, std::string name, const std::vector<std::pair<std::string, std::string>>& members, const std::vector<Type*>& types)
-        : Type(base, std::move(name), false, false) {
-        for (std::size_t i = 0; i < members.size(); i++) {
-            memberOffsets[members[i].first] = i;
-            memberTypes[members[i].first] = types[i];
-        }
-    }
+	friend class StructAST;
 
-    [[nodiscard]] std::size_t getMemberOffset(const std::string& memberName) override {
-        return memberOffsets[memberName];
-    }
+   public:
+	StructType(llvm::Type* base, std::string name, const std::vector<std::pair<std::string, std::string>>& members,
+			   const std::vector<Type*>& types)
+		: Type(base, std::move(name), false, false) {
+		for (std::size_t i = 0; i < members.size(); i++) {
+			memberOffsets[members[i].first] = i;
+			memberTypes[members[i].first] = types[i];
+		}
+	}
 
-    [[nodiscard]] Type* getMemberType(const std::string& memberName) override {
-        return memberTypes[memberName];
-    }
+	[[nodiscard]] std::size_t getMemberOffset(const std::string& memberName) override {
+		return memberOffsets[memberName];
+	}
 
-    llvm::Value* getDefaultValue(llvm::IRBuilder<>& builder) override {
-        return llvm::ConstantStruct::get(llvm::cast<llvm::StructType>(getBase()), {});
-    }
+	[[nodiscard]] Type* getMemberType(const std::string& memberName) override { return memberTypes[memberName]; }
+
+	llvm::Value* getDefaultValue(llvm::IRBuilder<>& builder) override {
+		return llvm::ConstantStruct::get(llvm::cast<llvm::StructType>(getBase()), {});
+	}
 };
 
 #endif	// EMMC_TYPE_H

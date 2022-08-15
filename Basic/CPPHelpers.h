@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <functional>
 #include <iostream>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <numeric>
@@ -21,6 +22,11 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#include <execinfo.h>
+#include <cstdio>
+#include <cstdlib>
+#include <csignal>
 
 template <typename T, typename S>
 struct std::hash<std::pair<T, S>> {
@@ -88,11 +94,26 @@ template <typename T, typename S>
 }
 
 std::vector<std::string> split(const std::string& s) {
-    std::stringstream ss(s);
-    std::istream_iterator<std::string> begin(ss);
-    std::istream_iterator<std::string> end;
+	std::stringstream ss(s);
+	std::istream_iterator<std::string> begin(ss);
+	std::istream_iterator<std::string> end;
 
-    return {begin, end};
+	return {begin, end};
 }
 
-#endif    // EMMC_CPPHELPERS_H
+void print_trace () {
+    void *array[10];
+    char **strings;
+    int size, i;
+
+    size = backtrace (array, 10);
+    strings = backtrace_symbols (array, size);
+    if (strings != nullptr) {
+        printf ("Obtained %d stack frames.\n", size);
+        for (i = 0; i < size; i++) printf ("%s\n", strings[i]);
+    }
+
+    free (strings);
+}
+
+#endif	// EMMC_CPPHELPERS_H

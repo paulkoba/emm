@@ -5,29 +5,29 @@
 #ifndef EMMC_MANGLING_H
 #define EMMC_MANGLING_H
 
-#include <vector>
 #include <string>
+#include <vector>
 
-#include "Value.h"
+#include "Lex/Token.h"
 #include "Type.h"
 #include "TypeRegistry.h"
-#include "Token.h"
+#include "Value.h"
 
 std::string mangle(const std::string &name, const std::vector<std::string> &types) {
-    std::string mangledName = "_E" + std::to_string(name.size()) + name;
+	std::string mangledName = "_E" + std::to_string(name.size()) + name;
 
-    for(auto &type : types) {
-        mangledName += getTypeRegistry()->getType(type)->getMangledName();
-    }
+	for (auto &type : types) {
+		mangledName += getTypeRegistry()->getType(type)->getMangledName();
+	}
 
-    return mangledName;
+	return mangledName;
 }
 
-std::string getBinaryOpName(Value& lhs, Value& rhs, TokenType op) {
-    auto t1 = lhs.getType()->getName();
-    auto t2 = rhs.getType()->getName();
-    auto functionName = functionNameFromTokenType(op);
-    return mangle(functionName, {t1, t2});
+std::string getBinaryOpName(Value &lhs, Value &rhs, TokenType::TokenType op) {
+	auto t1 = lhs.getType()->getName();
+	auto t2 = rhs.getType()->getName();
+	auto functionName = functionNameFromTokenType(op);
+	return mangle(functionName, {t1, t2});
 }
 
-#endif //EMMC_MANGLING_H
+#endif	// EMMC_MANGLING_H

@@ -37,4 +37,4 @@ void optimizeModule(llvm::Module& module) {
 	MPM.run(module, MAM);
 }
 
-#endif    // EMMC_OPTIMIZATIONPASSES_H
+#endif	// EMMC_OPTIMIZATIONPASSES_H

@@ -6,7 +6,7 @@ struct FunnyInt {
 
 impl FunnyInt {
     fn operator_add(other : FunnyInt) -> FunnyInt {
-        let output = FunnyInt()
+        let output : FunnyInt = FunnyInt()
         output.a = self.a + other.a
         return output
     }

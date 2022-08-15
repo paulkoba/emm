@@ -1,26 +1,25 @@
 #include <fstream>
 #include <iostream>
 
+#include "Basic/CPPHelpers.h"
 #include "Compilation.h"
-#include "CPPHelpers.h"
-#include "Lexer.h"
+#include "Lex/TokenTypes.h"
+#include "OptimizationPasses.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
-#include "OptimizationPasses.h"
-#include "Parser.h"
+
+#include "Parse/Parser.h"
 
 int main() {
-	std::ifstream input("../examples/operator_overloading.emm");
-	std::stringstream buffer;
-	buffer << input.rdbuf();
-	auto tmp = lex(buffer.str());
-	std::cout << tmp << std::endl << std::endl;
-	auto llvmContext = std::make_unique<llvm::LLVMContext>();
-	auto r = parseFile(tmp, std::make_unique<llvm::Module>("some_module", *llvmContext));
+	Lexer lexer("../examples/operator_overloading.emm");
+    auto llvmContext = std::make_unique<llvm::LLVMContext>();
+    Parser parser(&lexer, std::make_unique<llvm::Module>("some_module", *llvmContext));
+
+	auto r = parser.parse();
 
 	r->populateParents();
 

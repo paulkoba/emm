@@ -2,9 +2,10 @@
 // Created by fail on 7/25/22.
 //
 
-#ifndef EMMC_LEXER_H
-#define EMMC_LEXER_H
+#ifndef EMMC_RAWLEXER_H
+#define EMMC_RAWLEXER_H
 
+#include <iostream>
 #include <vector>
 
 #include "Token.h"
@@ -26,7 +27,7 @@ std::vector<Token> lex(const std::string& input) {
 
 	auto addPreviousToken = [&]() {
 		if (current.type == TOK_IDENTIFIER) {
-			TokenType r = tryMatchKeyword(current.literal);
+			LegacyTokenType r = tryMatchKeywordLegacy(current.literal);
 			if (r != TOK_NONE) {
 				current.type = r;
 			}
@@ -142,7 +143,7 @@ std::vector<Token> lex(const std::string& input) {
 			continue;
 		}
 
-		TokenType tt = getTrivialTokenType(input[pos]);
+		LegacyTokenType tt = getTrivialLegacyTokenType(input[pos]);
 
 		// = and - need special treatment, as they may be part of more complex
 		// lexemes.
@@ -193,4 +194,4 @@ std::vector<Token> lex(const std::string& input) {
 	return tokens;
 }
 
-#endif	// EMMC_LEXER_H
+#endif	// EMMC_RAWLEXER_H
