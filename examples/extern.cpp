@@ -20,3 +20,8 @@ extern "C" int8_t print_char(int8_t i) {
 	printf("%c", (char)i);
 	return i;
 }
+
+extern "C" int64_t* print_ptr(int64_t* i) {
+    printf("%p\n", i);
+    return i;
+}

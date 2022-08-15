@@ -15,7 +15,7 @@
 #include "Parse/Parser.h"
 
 int main() {
-	Lexer lexer("../examples/operator_overloading.emm");
+	Lexer lexer("../examples/dereferencing.emm");
     auto llvmContext = std::make_unique<llvm::LLVMContext>();
     Parser parser(&lexer, std::make_unique<llvm::Module>("some_module", *llvmContext));
 

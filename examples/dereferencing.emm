@@ -1,0 +1,20 @@
+extern fn print_i64(n : i64) -> i64
+extern fn print_ptr(n : Pointer<i64>) -> Pointer<i64>
+
+fn dereference_something(n : i64) -> i64 {
+    print_ptr(*n)
+    let a = n
+    let b = n + 100
+    let c = n + 500
+    print_ptr(*a)
+    print_ptr(*b)
+    print_ptr(*c)
+
+    return 0
+}
+
+fn main() -> i64 {
+    dereference_something(5)
+
+    return 0
+}

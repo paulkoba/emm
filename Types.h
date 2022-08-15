@@ -163,6 +163,9 @@ Value buildBuiltinIntegerUnaryOp(llvm::IRBuilder<>& builder, Value lhs, TokenTyp
 		case TokenType::NOT:
 			result = builder.CreateNot(lhs.getValue());
 			return {result, lhs.getType()};
+        case TokenType::PRODUCT: //Dereference operator
+            result = llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand();
+            return {result, getTypeRegistry()->getPointerType(lhs.getType())};
 		default:
 			compilationError("buildBuiltinIntegerUnaryOp: Not yet implemented.");
 			return {nullptr, nullptr};

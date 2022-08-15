@@ -77,17 +77,24 @@ class Parser {
     // NOLINTNEXTLINE(misc-no-recursion)
     std::string parseType() {
         std::string output;
-        auto peekIdentifier = lexer->consumeIdentifier();
-        if(!peekIdentifier) {
+        auto typeName = lexer->consumeIdentifier();
+        if(!typeName) {
             return output;
         }
 
-        output = peekIdentifier.getValue().str();
+        output = typeName.getValue().str();
 
         if(lexer->peekOperator().getType() == TokenType::LESS) {
             output += " < ";
 
             lexer->consumeOperator();
+
+            auto peeked = lexer->peekIdentifier();
+
+            if(peeked.getType()) {
+                output += peeked.getValue().str();
+                lexer->consumeIdentifier();
+            }
 
             while (lexer->peekOperator().getType() == TokenType::COMMA) {
                 lexer->consumeOperator();
@@ -136,7 +143,8 @@ class Parser {
     // NOLINTNEXTLINE(misc-no-recursion)
     std::unique_ptr<BaseASTNode> parseUnary() {
         auto op = lexer->peekOperator();
-        if (op.getType() == TokenType::MINUS) {
+        // Unary minus, unary plus, and dereference operator are the only unary operators currently supported
+        if (op.getType() == TokenType::MINUS || op.getType() == TokenType::PLUS || op.getType() == TokenType::PRODUCT) {
             auto r = lexer->consumeOperator();
             if(!r) {
                 return nullptr;
@@ -609,12 +617,9 @@ class Parser {
             return nullptr;
         }
 
-        auto returnType = lexer->consumeIdentifier();
-        if(!returnType) {
-            return nullptr;
-        }
+        std::string returnType = parseType();
 
-        return std::make_unique<PrototypeAST>(name.getValue().str(), returnType.getValue().str(), args, !structName.empty());
+        return std::make_unique<PrototypeAST>(name.getValue().str(), returnType, args, !structName.empty());
     }
 
     std::unique_ptr<FunctionAST> parseFunction() {
