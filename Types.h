@@ -163,9 +163,19 @@ Value buildBuiltinIntegerUnaryOp(llvm::IRBuilder<>& builder, Value lhs, TokenTyp
 		case TokenType::NOT:
 			result = builder.CreateNot(lhs.getValue());
 			return {result, lhs.getType()};
-        case TokenType::PRODUCT: //Dereference operator
+        case TokenType::BITWISE_AND: // Reference
             result = llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand();
             return {result, getTypeRegistry()->getPointerType(lhs.getType())};
+        case TokenType::PRODUCT: { // Dereference operator
+            auto pointed = getTypeRegistry()->getPointedType(lhs.getType());
+            if (!pointed) {
+                compilationError("Cannot dereference a non-pointer type");
+                return {};
+            }
+
+            result = builder.CreateLoad(pointed->getBase(), lhs.getValue());
+            return {result, getTypeRegistry()->getPointedType(lhs.getType())};
+        }
 		default:
 			compilationError("buildBuiltinIntegerUnaryOp: Not yet implemented.");
 			return {nullptr, nullptr};

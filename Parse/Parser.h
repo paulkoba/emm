@@ -144,7 +144,8 @@ class Parser {
     std::unique_ptr<BaseASTNode> parseUnary() {
         auto op = lexer->peekOperator();
         // Unary minus, unary plus, and dereference operator are the only unary operators currently supported
-        if (op.getType() == TokenType::MINUS || op.getType() == TokenType::PLUS || op.getType() == TokenType::PRODUCT) {
+        if (op.getType() == TokenType::MINUS || op.getType() == TokenType::PLUS ||
+            op.getType() == TokenType::TokenType::PRODUCT || op.getType() == TokenType::TokenType::BITWISE_AND) {
             auto r = lexer->consumeOperator();
             if(!r) {
                 return nullptr;

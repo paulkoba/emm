@@ -225,6 +225,8 @@ class Lexer {
                 return {llvm::StringRef(operatorStart, 1), tempLine, TokenType::NOT};
             case '.':
                 return {llvm::StringRef(operatorStart, 1), tempLine, TokenType::DOT};
+            case '&':
+                return {llvm::StringRef(operatorStart, 1), tempLine, TokenType::BITWISE_AND};
         }
 
         return {llvm::StringRef(operatorStart, 1), tempLine, TokenType::NONE};

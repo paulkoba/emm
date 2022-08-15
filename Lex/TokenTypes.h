@@ -11,56 +11,9 @@
 DECLARE_ENUM(TokenType, NONE, END_OF_FILE, IDENTIFIER, INTEGER, STRING, LPAREN, RPAREN, LBRACE, RBRACE, LBRACKET,
 			 RBRACKET, COLON, PLUS, MINUS, PRODUCT, DIVISION, EQUALS, ASSIGN, GREATER, LESS, OUTPUT_TYPE, SEMICOLON,
 			 LESS_OR_EQUAL, GREATER_OR_EQUAL, COMMA, MODULO, NOT_EQUALS, SHIFT_LEFT, SHIFT_RIGHT, LOGICAL_AND, LOGICAL_OR, DECREMENT, INCREMENT,
-             PLUS_ASSIGN, MINUS_ASSIGN, PRODUCT_ASSIGN, DIVISION_ASSIGN, MODULO_ASSIGN,
+             PLUS_ASSIGN, MINUS_ASSIGN, PRODUCT_ASSIGN, DIVISION_ASSIGN, MODULO_ASSIGN, BITWISE_AND,
              NOT, FLOATING_POINT, DOT, KW_IF, KW_ELSE,
 			 KW_WHILE, KW_RETURN, KW_LET, KW_FN, KW_TRUE, KW_FALSE, KW_MUT, KW_EXTERN, KW_STRUCT, KW_IMPL, KW_AS)
-
-constexpr bool isKeyword(TokenType::TokenType type) { return type >= TokenType::KW_IF; }
-
-constexpr TokenType::TokenType getTrivialTokenType(char ch) {
-	switch (ch) {
-		case '+':
-			return TokenType::PLUS;
-		case '-':
-			return TokenType::MINUS;
-		case '*':
-			return TokenType::PRODUCT;
-		case '/':
-			return TokenType::DIVISION;
-		case '%':
-			return TokenType::MODULO;
-		case '=':
-			return TokenType::ASSIGN;
-		case '>':
-			return TokenType::GREATER;
-		case '<':
-			return TokenType::LESS;
-		case ';':
-			return TokenType::SEMICOLON;
-		case '(':
-			return TokenType::LPAREN;
-		case ')':
-			return TokenType::RPAREN;
-		case '{':
-			return TokenType::LBRACE;
-		case '}':
-			return TokenType::RBRACE;
-		case '[':
-			return TokenType::LBRACKET;
-		case ']':
-			return TokenType::RBRACKET;
-		case ':':
-			return TokenType::COLON;
-		case ',':
-			return TokenType::COMMA;
-		case '!':
-			return TokenType::NOT;
-		case '.':
-			return TokenType::DOT;
-		default:
-			return TokenType::NONE;
-	}
-}
 
 TokenType::TokenType tryMatchKeyword(const std::string& input) {
 	static std::unordered_map<std::string, TokenType::TokenType> keywords = {
@@ -127,7 +80,6 @@ std::string functionNameFromTokenType(TokenType::TokenType op) {
         case TokenType::LESS_OR_EQUAL: return "operator_less_or_equal";
         case TokenType::GREATER_OR_EQUAL: return "operator_greater_or_equal";
         case TokenType::NOT_EQUALS: return "operator_not_equals";
-
         default: return "operator_unknown";
     }
 }
