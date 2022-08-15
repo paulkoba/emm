@@ -760,6 +760,7 @@ class LetAST : public BaseASTNode {
 
 	Value codegen(llvm::IRBuilder<> &builder) override {
 		Value result = value->codegen(builder);
+
 		llvm::Type *llvmType = nullptr;
 		if (type.empty()) {
 			llvmType = result.getType()->getBase();

@@ -5,10 +5,10 @@ fn dereference_something(n : i64) -> i64 {
     print_i64(n)
 
     let ptr : Pointer<i64> = &n
-
+    let ptr_ptr : Pointer<Pointer<i64> > = &ptr
     print_ptr(ptr)
     print_i64(*ptr)
-
+    print_ptr(ptr_ptr as Pointer<i64>)
     return 0
 }
 

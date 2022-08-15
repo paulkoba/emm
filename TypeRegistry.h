@@ -47,6 +47,7 @@ class TypeRegistry {
 		if (parts.size() == 1) {
 			auto it = types.find(name);
 			if (it == types.end()) {
+				compilationError("Type " + name + " not found");
 				return nullptr;
 			}
 			return it->second;
@@ -98,7 +99,11 @@ class TypeRegistry {
 	[[nodiscard]] Type* getPointerType(Type* type) {
 		auto it = pointerTypes.find(type);
 		if (it == pointerTypes.end()) {
-			return nullptr;
+			auto newType = new Type(type->getBase()->getPointerTo(), "Pointer<" + type->getName() + ">", true, false);
+			pointerTypes[type] = newType;
+			pointedTypes[newType] = type;
+
+			return newType;
 		}
 		return it->second;
 	}

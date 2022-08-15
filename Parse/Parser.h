@@ -89,12 +89,7 @@ class Parser {
 
             lexer->consumeOperator();
 
-            auto peeked = lexer->peekIdentifier();
-
-            if(peeked.getType()) {
-                output += peeked.getValue().str();
-                lexer->consumeIdentifier();
-            }
+            output += parseType();
 
             while (lexer->peekOperator().getType() == TokenType::COMMA) {
                 lexer->consumeOperator();
@@ -110,7 +105,6 @@ class Parser {
 
             output += " > ";
         }
-        std::cerr << "Parsed type: " << output << std::endl;
         return output;
     }
 
@@ -241,12 +235,12 @@ class Parser {
                     return nullptr;
                 }
 
-                auto type = lexer->consumeIdentifier();
-                if(!type) {
+                auto type = parseType();
+                if(type.empty()) {
                     return nullptr;
                 }
 
-                left = std::make_unique<AsAST>(std::move(left), type.getValue().str());
+                left = std::make_unique<AsAST>(std::move(left), type);
                 continue;
             }
 
