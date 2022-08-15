@@ -9,11 +9,27 @@ fn dereference_something(n : i64) -> i64 {
     print_ptr(ptr)
     print_i64(*ptr)
     print_ptr(ptr_ptr as Pointer<i64>)
+
     return 0
 }
 
+struct Test {
+    a : i64,
+}
+
+impl Test {
+    fn test() -> Pointer<Test> {
+        print_ptr(self)
+        return &self
+    }
+}
+
 fn main() -> i64 {
-    dereference_something(5)
+    let test = Test()
+    test.a = 42
+
+    let test_ptr = test.test()
+
 
     return 0
 }

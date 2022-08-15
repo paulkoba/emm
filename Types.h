@@ -13,12 +13,11 @@
 #include <string>
 
 #include "AST/CallExprAST.h"
-#include "Lex/Token.h"
 #include "Basic/Logging.h"
+#include "Lex/Token.h"
 #include "Mangling.h"
 #include "TypeRegistry.h"
 #include "Value.h"
-#include "Basic/Logging.h"
 
 static Value buildBuiltinIntegerBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType::TokenType op) {
 	llvm::Value* result = nullptr;
@@ -85,9 +84,11 @@ static Value buildBuiltinIntegerBinaryOp(llvm::IRBuilder<>& builder, Value lhs, 
 			}
 			return {result, lhs.getType()};
 		case TokenType::ASSIGN:
-            compilationWarning("Tried to generate assignment using buildBuiltinIntegerBinaryOp, which is deprecated. This is a compiler bug");
-            result = builder.CreateStore(rhs.getValue(),
-                                         llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand());
+			compilationWarning(
+				"Tried to generate assignment using buildBuiltinIntegerBinaryOp, which is deprecated. This is a "
+				"compiler bug");
+			result = builder.CreateStore(rhs.getValue(),
+										 llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand());
 			return {result, lhs.getType()};
 		default:
 			compilationError("buildBuiltinIntegerBinaryOp: Not yet implemented.");
@@ -95,7 +96,8 @@ static Value buildBuiltinIntegerBinaryOp(llvm::IRBuilder<>& builder, Value lhs, 
 	}
 }
 
-static Value buildBuiltinFloatingPointBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, TokenType::TokenType op) {
+static Value buildBuiltinFloatingPointBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs,
+											   TokenType::TokenType op) {
 	llvm::Value* result = nullptr;
 
 	switch (op) {
@@ -127,7 +129,9 @@ static Value buildBuiltinFloatingPointBinaryOp(llvm::IRBuilder<>& builder, Value
 			compilationError("buildBuiltinFloatingPointBinaryOp: Modulo operator not implemented.");
 			return {nullptr, nullptr};
 		case TokenType::ASSIGN:
-            compilationWarning("Tried to generate assignment using buildBuiltinFloatingPointBinaryOp, which is deprecated. This is a compiler bug");
+			compilationWarning(
+				"Tried to generate assignment using buildBuiltinFloatingPointBinaryOp, which is deprecated. This is a "
+				"compiler bug");
 			return {builder.CreateStore(rhs.getValue(),
 										llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand()),
 					lhs.getType()};
@@ -155,7 +159,7 @@ Value buildBuiltinBinaryOp(llvm::IRBuilder<>& builder, Value lhs, Value rhs, Tok
 Value buildBuiltinIntegerUnaryOp(llvm::IRBuilder<>& builder, Value lhs, TokenType::TokenType op) {
 	llvm::Value* result = nullptr;
 	switch (op) {
-        case TokenType::PLUS:
+		case TokenType::PLUS:
 			return {lhs.getValue(), lhs.getType()};
 		case TokenType::MINUS:
 			result = builder.CreateNeg(lhs.getValue());
@@ -163,19 +167,19 @@ Value buildBuiltinIntegerUnaryOp(llvm::IRBuilder<>& builder, Value lhs, TokenTyp
 		case TokenType::NOT:
 			result = builder.CreateNot(lhs.getValue());
 			return {result, lhs.getType()};
-        case TokenType::BITWISE_AND: // Reference
-            result = llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand();
-            return {result, getTypeRegistry()->getPointerType(lhs.getType())};
-        case TokenType::PRODUCT: { // Dereference operator
-            auto pointed = getTypeRegistry()->getPointedType(lhs.getType());
-            if (!pointed) {
-                compilationError("Cannot dereference a non-pointer type");
-                return {};
-            }
+		case TokenType::BITWISE_AND:  // Reference
+			result = llvm::dyn_cast<llvm::LoadInst>(lhs.getValue())->getPointerOperand();
+			return {result, getTypeRegistry()->getPointerType(lhs.getType())};
+		case TokenType::PRODUCT: {	// Dereference operator
+			auto pointed = getTypeRegistry()->getPointedType(lhs.getType());
+			if (!pointed) {
+				compilationError("Cannot dereference a non-pointer type");
+				return {};
+			}
 
-            result = builder.CreateLoad(pointed->getBase(), lhs.getValue());
-            return {result, getTypeRegistry()->getPointedType(lhs.getType())};
-        }
+			result = builder.CreateLoad(pointed->getBase(), lhs.getValue());
+			return {result, getTypeRegistry()->getPointedType(lhs.getType())};
+		}
 		default:
 			compilationError("buildBuiltinIntegerUnaryOp: Not yet implemented.");
 			return {nullptr, nullptr};
