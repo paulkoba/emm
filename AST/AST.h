@@ -1088,6 +1088,60 @@ class ImplAST : public BaseASTNode {
 	}
 };
 
+class StructInitializerAST : public BaseASTNode {
+    std::string structName;
+    std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members;
+
+public:
+    StructInitializerAST(std::string structName, std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members)
+            : structName(std::move(structName)), members(std::move(members)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output = std::to_string((int64_t)this) + " [label=\"StructInitializerAST\"]\n";
+        for (const auto &member : members) {
+            output += member.second->generateDOTHeader();
+        }
+        return output;
+    }
+
+    [[nodiscard]] std::string generateDOT() override {
+        std::string output;
+        for (const auto &member : members) {
+            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)member.second.get()) + "\n";
+            output += member.second->generateDOT();
+        }
+        return output;
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        auto type = getTypeRegistry()->getType(structName);
+
+        auto output = type->getDefaultValue(builder);
+
+        for(auto& el : members) {
+            auto offset = type->getMemberOffset(el.first);
+
+            auto rhs = el.second->codegen(builder);
+
+            if(!rhs) {
+                compilationError("Could not codegen member " + el.first);
+                return {};
+            }
+
+            output = builder.CreateInsertValue(output, rhs.getValue(), offset);
+        }
+
+        return {output, type};
+    }
+
+    void populateParents() override {
+        for (const auto &member : members) {
+            member.second->parent = this;
+            member.second->populateParents();
+        }
+    }
+};
+
 std::unique_ptr<BaseASTNode> fromLiteral(const std::string &integer, const std::string &type) {
 	// TODO: There is definitely a better way to do this
 	if (type == "i8") {

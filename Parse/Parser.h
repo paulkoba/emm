@@ -152,12 +152,49 @@ class Parser {
 		return parsePrimary();
 	}
 
+    std::unique_ptr<StructInitializerAST> parseStructInitializer(const std::string& structName) {
+        if (!lexer->consumeLeftBrace()) {
+            return nullptr;
+        }
+        std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members;
+
+        while (!lexer->peekRightBrace()) {
+            auto name = lexer->consumeIdentifier();
+            if (!name) {
+                compilationError(lexer, "Expected identifier");
+                return nullptr;
+            }
+
+            auto colon = lexer->consumeColon();
+            if (!colon) {
+                return nullptr;
+            }
+
+            auto expr = parseExpression();
+            if (!expr) {
+                return nullptr;
+            }
+            members.push_back(std::make_pair<>(name.getValue().str(), std::move(expr)));
+            if (lexer->peekComma()) {
+                lexer->consumeComma();
+            }
+        }
+
+        if (!lexer->consumeRightBrace()) {
+            return nullptr;
+        }
+
+        return std::make_unique<StructInitializerAST>(structName, std::move(members));
+    }
+
 	// NOLINTNEXTLINE(misc-no-recursion)
 	std::unique_ptr<BaseASTNode> parsePrimary() {
 		auto tryPeekIdentifier = lexer->peekIdentifier();
 		if (tryPeekIdentifier.getType() == TokenType::IDENTIFIER) {
 			auto id = lexer->consumeIdentifier();
-			if (lexer->peekLeftParen()) {
+            if(lexer->peekLeftBrace()) {
+                return parseStructInitializer(id.getValue().str());
+            } else if (lexer->peekLeftParen()) {
 				lexer->consumeLeftParen();
 				auto args = parseArgList();
 
@@ -469,12 +506,12 @@ class Parser {
 				return nullptr;
 			}
 
-			auto type = lexer->consumeIdentifier();
-			if (!type) {
+			auto type = parseType();
+			if (type.empty()) {
 				return nullptr;
 			}
 
-			members.emplace_back(identifier.getValue().str(), type.getValue().str());
+			members.emplace_back(identifier.getValue().str(), type);
 
 			if (lexer->peekComma()) {
 				lexer->consumeComma();

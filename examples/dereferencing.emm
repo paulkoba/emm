@@ -18,9 +18,9 @@ struct Test {
 }
 
 impl Test {
-    fn test() -> Pointer<Test> {
+    fn test() -> Test {
         print_ptr(self)
-        return &self
+        return self
     }
 }
 
@@ -29,7 +29,6 @@ fn main() -> i64 {
     test.a = 42
 
     let test_ptr = test.test()
-
 
     return 0
 }

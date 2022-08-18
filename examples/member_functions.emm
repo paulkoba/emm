@@ -26,9 +26,15 @@ impl WeirdArray {
     }
 }
 
+fn new_weird_array(size : i64) -> WeirdArray {
+    return WeirdArray {
+        size : size,
+        data : malloc(size * 8) as Pointer<i64>,
+    }
+}
+
 fn main() -> i64 {
-    let array = WeirdArray()
-    array = array.new(10)
+    let array = new_weird_array(10)
 
     array.set(0, 1)
     array.set(1, 2)
