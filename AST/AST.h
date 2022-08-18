@@ -413,6 +413,7 @@ class FunctionAST : public BaseASTNode {
 	std::unique_ptr<ScopeAST> body;
 
 	std::string structName;
+    bool isStatic;
 	Value returnValue;
 	llvm::BasicBlock *returnBlock = nullptr;
 
@@ -420,8 +421,8 @@ class FunctionAST : public BaseASTNode {
     FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
             : proto(std::move(proto)), body(std::move(body)), structName("") {}
 
-	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, std::string structName)
-		: proto(std::move(proto)), body(std::move(body)), structName(std::move(structName)) {}
+	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, std::string structName, bool isStatic = false)
+		: proto(std::move(proto)), body(std::move(body)), structName(std::move(structName)), isStatic(isStatic) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
 		std::string output = std::to_string((int64_t)this) + " [label=\"FunctionAST\"]\n";
@@ -463,7 +464,7 @@ class FunctionAST : public BaseASTNode {
 		builder.SetInsertPoint(entryBlock);
 		std::size_t idx = 0;
 
-		bool skip = true;
+		bool skip = !isStatic;
 
 		for (auto &arg : function->args()) {
 			if (skip && !structName.empty()) {

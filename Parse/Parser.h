@@ -199,7 +199,15 @@ class Parser {
 				auto args = parseArgList();
 
 				return std::make_unique<CallExprAST>(id.getValue().str(), std::move(args));
-			} else {
+			} else if(lexer->peekOperator().getType() == TokenType::DOUBLE_COLON) {
+                lexer->consumeOperator();
+                auto funcName = lexer->consumeIdentifier();
+                lexer->consumeLeftParen();
+
+                auto args = parseArgList();
+
+                return std::make_unique<CallExprAST>(mangling_combine(funcName.getValue().str(), id.getValue().str()), std::move(args));
+            } else {
 				return std::make_unique<VariableAST>(id.getValue().str(), "");
 			}
 		}
@@ -463,12 +471,20 @@ class Parser {
 				return nullptr;
 			}
 
+            bool isStatic = false;
+
+            if(fnKeyword.getType() == TokenType::KW_STATIC) {
+                fnKeyword = lexer->consumeKeyword();
+
+                isStatic = true;
+            }
+
 			if (fnKeyword.getType() != TokenType::TokenType::KW_FN) {
 				compilationError(lexer, "Expected keyword 'fn'");
 				return nullptr;
 			}
 
-			auto fn = parseFunction(structName.getValue().str());
+			auto fn = parseFunction(structName.getValue().str(), isStatic);
 			if (!fn) {
 				return nullptr;
 			}
@@ -598,7 +614,7 @@ class Parser {
 		return std::make_unique<WhileAST>(std::move(condition), std::move(body));
 	}
 
-	std::unique_ptr<PrototypeAST> parsePrototype(const std::string& structName = "") {
+	std::unique_ptr<PrototypeAST> parsePrototype(const std::string& structName = "", bool isStatic = false) {
 		auto name = lexer->consumeIdentifier();
 		if (!name) {
 			return nullptr;
@@ -611,7 +627,7 @@ class Parser {
 
 		std::vector<std::pair<std::string, std::string>> args;
 
-		if (!structName.empty()) {
+		if (!structName.empty() && !isStatic) {
 			args.emplace_back("self", "Pointer < " + structName + " > ");
 		}
 
@@ -651,7 +667,7 @@ class Parser {
 
 		std::string returnType = parseType();
 
-		return std::make_unique<PrototypeAST>(name.getValue().str(), returnType, args, !structName.empty());
+		return std::make_unique<PrototypeAST>(!isStatic ? name.getValue().str() : mangling_combine(name.getValue().str(), structName), returnType, args, !structName.empty() && !isStatic);
 	}
 
 	std::unique_ptr<FunctionAST> parseFunction() {
@@ -665,15 +681,15 @@ class Parser {
 		return std::make_unique<FunctionAST>(std::move(proto), std::move(scope));
 	}
 
-	std::unique_ptr<FunctionAST> parseFunction(const std::string& structName) {
-		std::unique_ptr<PrototypeAST> proto = parsePrototype(structName);
+	std::unique_ptr<FunctionAST> parseFunction(const std::string& structName, bool isStatic = false) {
+		std::unique_ptr<PrototypeAST> proto = parsePrototype(structName, isStatic);
 		if (!proto) {
 			return nullptr;
 		}
 
 		std::unique_ptr<ScopeAST> scope = parseScope();
 
-		return std::make_unique<FunctionAST>(std::move(proto), std::move(scope), structName);
+		return std::make_unique<FunctionAST>(std::move(proto), std::move(scope), structName, isStatic);
 	}
 
    public:

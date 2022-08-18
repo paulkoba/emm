@@ -201,7 +201,9 @@ class Lexer {
 			return {llvm::StringRef(operatorStart, 2), tempLine, TokenType::MODULO_ASSIGN};
 		} else if (*start == 'a' && *(start + 1) == 's') {
 			return {llvm::StringRef(operatorStart, 2), tempLine, TokenType::KW_AS};
-		}
+		} else if (*start == ':' && *(start + 1) == ':') {
+            return {llvm::StringRef(operatorStart, 2), tempLine, TokenType::DOUBLE_COLON};
+        }
 
 		// Handle operators with one character
 		switch (*start) {

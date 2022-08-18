@@ -23,6 +23,14 @@ std::string mangle(const std::string &name, const std::vector<std::string> &type
 	return mangledName;
 }
 
+std::string mangling_combine(const std::string& name, const std::string& structName) {
+    return "_S" + std::to_string(structName.size()) + structName + "_" + name;
+}
+
+std::string mangle(const std::string &name, const std::string& structName, const std::vector<std::string> &types) {
+    return mangle(mangling_combine(name, structName), types);
+}
+
 std::string getBinaryOpName(Value &lhs, Value &rhs, TokenType::TokenType op) {
 	auto t1 = lhs.getType()->getName();
 	auto t2 = rhs.getType()->getName();

@@ -8,9 +8,11 @@ struct WeirdArray {
 }
 
 impl WeirdArray {
-    fn new(size : i64) -> WeirdArray {
-        self.size = size
-        self.data = malloc(size * 8) as Pointer<i64>
+    static fn new(size : i64) -> WeirdArray {
+        return WeirdArray {
+            data : malloc(size * 8),
+            size : size,
+        }
     }
 
     fn drop() -> void {
@@ -34,7 +36,7 @@ fn new_weird_array(size : i64) -> WeirdArray {
 }
 
 fn main() -> i64 {
-    let array = new_weird_array(10)
+    let array = WeirdArray::new(10)
 
     array.set(0, 1)
     array.set(1, 2)
