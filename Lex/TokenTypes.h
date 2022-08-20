@@ -13,7 +13,7 @@ DECLARE_ENUM(TokenType, NONE, END_OF_FILE, IDENTIFIER, INTEGER, STRING, LPAREN, 
 			 LESS_OR_EQUAL, GREATER_OR_EQUAL, COMMA, MODULO, NOT_EQUALS, SHIFT_LEFT, SHIFT_RIGHT, LOGICAL_AND,
 			 LOGICAL_OR, DECREMENT, INCREMENT, PLUS_ASSIGN, MINUS_ASSIGN, PRODUCT_ASSIGN, DIVISION_ASSIGN,
 			 MODULO_ASSIGN, BITWISE_AND, NOT, FLOATING_POINT, DOT, DOUBLE_COLON, KW_IF, KW_ELSE, KW_WHILE, KW_RETURN, KW_LET, KW_FN,
-			 KW_TRUE, KW_FALSE, KW_MUT, KW_EXTERN, KW_STRUCT, KW_IMPL, KW_AS, KW_STATIC)
+			 KW_TRUE, KW_FALSE, KW_MUT, KW_EXTERN, KW_STRUCT, KW_IMPL, KW_AS, KW_STATIC, KW_DEREF)
 
 TokenType::TokenType tryMatchKeyword(const std::string& input) {
 	static std::unordered_map<std::string, TokenType::TokenType> keywords = {
@@ -21,7 +21,7 @@ TokenType::TokenType tryMatchKeyword(const std::string& input) {
 		{"return", TokenType::KW_RETURN}, {"let", TokenType::KW_LET},		{"fn", TokenType::KW_FN},
 		{"true", TokenType::KW_TRUE},	  {"false", TokenType::KW_FALSE},	{"mut", TokenType::KW_MUT},
 		{"as", TokenType::KW_AS},		  {"extern", TokenType::KW_EXTERN}, {"struct", TokenType::KW_STRUCT},
-		{"impl", TokenType::KW_IMPL},     {"static", TokenType::KW_STATIC},};
+		{"impl", TokenType::KW_IMPL},     {"static", TokenType::KW_STATIC}, {"deref", TokenType::KW_DEREF}};
 
 	return keywords.count(input) ? keywords[input] : TokenType::NONE;
 }

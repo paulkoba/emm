@@ -116,6 +116,10 @@ class VariableAST : public BaseASTNode {
 		}
 		return {var->value.getValue(), var->value.getType()};
 	}
+
+    bool canCodegenPtr() override {
+        return true;
+    }
 };
 
 class StringAST : public BaseASTNode {
@@ -921,6 +925,10 @@ class MemberAST : public BaseASTNode {
 		return {ptr, result.getType()->getMemberType(name)};
 	}
 
+    bool canCodegenPtr() override {
+        return true;
+    }
+
 	void populateParents() override {
 		if (value) {
 			value->parent = this;
@@ -1139,6 +1147,43 @@ public:
         for (const auto &member : members) {
             member.second->parent = this;
             member.second->populateParents();
+        }
+    }
+};
+
+class DerefAST : public BaseASTNode {
+    std::unique_ptr<BaseASTNode> pointer;
+
+public:
+    explicit DerefAST(std::unique_ptr<BaseASTNode> pointer)
+            : pointer(std::move(pointer)) {}
+
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        std::string output = std::to_string((int64_t)this) + " [label=\"DerefAST\"]\n";
+        if (pointer) output += pointer->generateDOTHeader();
+        return output;
+    }
+
+    [[nodiscard]] std::string generateDOT() override {
+        std::string output;
+        if (pointer) {
+            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)pointer.get()) + "\n";
+            output += pointer->generateDOT();
+        }
+        return output;
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        auto rhs = pointer->codegen(builder);
+        auto pointed = getTypeRegistry()->getPointedType(rhs.getType());
+        auto result = builder.CreateLoad(pointed->getBase(), rhs.getValue());
+        return {result, getTypeRegistry()->getPointedType(rhs.getType())};
+    }
+
+    void populateParents() override {
+        if (pointer) {
+            pointer->parent = this;
+            pointer->populateParents();
         }
     }
 };

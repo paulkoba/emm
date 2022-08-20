@@ -305,7 +305,14 @@ class Parser {
 					lexer->consumeLeftParen();
 					auto args = parseArgList();
 					args.insert(args.begin(), std::move(left));
-					left = std::make_unique<StructCallExprAST>(member.getValue().str(), std::move(args));
+					if(member.getValue().str() == "deref") {
+                        if(args.size() != 1) {
+                            compilationError(lexer, "deref must not have any arguments");
+                        }
+                        left = std::make_unique<DerefAST>(std::move(args[0]));
+                    } else {
+                        left = std::make_unique<StructCallExprAST>(member.getValue().str(), std::move(args));
+                    }
 				}
 
 				continue;
@@ -619,6 +626,11 @@ class Parser {
 		if (!name) {
 			return nullptr;
 		}
+
+        if(tryMatchKeyword(name.getValue().str()) != TokenType::NONE) {
+            compilationError(lexer, "Expected identifier");
+            return nullptr;
+        }
 
 		bool lparenFound = lexer->consumeLeftParen();
 		if (!lparenFound) {

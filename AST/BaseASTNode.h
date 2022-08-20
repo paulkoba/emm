@@ -49,6 +49,10 @@ class BaseASTNode {
 		return {};
 	}
 
+    virtual bool canCodegenPtr() {
+        return false;
+    }
+
 	virtual void populateParents() {
 		// Do nothing
 	}
