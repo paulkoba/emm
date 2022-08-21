@@ -26,10 +26,6 @@ impl WeirdArray {
     fn set(index : i64, value : i64) -> void {
         self.data[index] = value
     }
-
-    fn operator_deref() -> i64 {
-        return self.data[0]
-    }
 }
 
 fn new_weird_array(size : i64) -> WeirdArray {

@@ -558,13 +558,18 @@ class Parser {
 			return nullptr;
 		}
 
+        bool shouldGenerate = true;
+
 		while (!lexer->peekRightBrace()) {
 			auto statement = parseStatement();
 			if (!statement) {
 				return nullptr;
 			}
+            if(statement->alwaysReturns()) {
+                shouldGenerate = false;
+            }
 
-			statements.push_back(std::move(statement));
+			if(shouldGenerate) statements.push_back(std::move(statement));
 		}
 
 		auto rightBraceFound = lexer->consumeRightBrace();
