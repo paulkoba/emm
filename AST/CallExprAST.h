@@ -47,8 +47,9 @@ class CallExprAST : public BaseASTNode {
 		std::vector<std::string> oArgsTypes;
 
 		for (const auto &arg : args) {
-			oArgs.push_back(arg->codegen(builder).getValue());
-			oArgsTypes.push_back(arg->codegen(builder).getType()->getName());
+            auto r =  arg->codegen(builder);
+			oArgs.push_back(r.getValue());
+			oArgsTypes.push_back(r.getType()->getName());
 		}
 
 		if (shouldMangle) {

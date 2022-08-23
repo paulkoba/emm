@@ -1,0 +1,79 @@
+extern fn puts(str : Pointer<i8>) -> i32
+extern fn malloc(size : i64) -> Pointer<i8>
+extern fn strlen(ptr : Pointer<i8>) -> i64
+extern fn memcpy(dest : Pointer<i8>, src : Pointer<i8>, count : i64) -> Pointer<i8>
+
+struct String {
+    size : i64,
+    data : Pointer<i8>,
+}
+
+impl String {
+    static fn from(src : Pointer<i8>) -> String {
+        let len = strlen(src)
+        let data = malloc(len + 1)
+
+        memcpy(data, src, len + 1)
+
+        return String {
+            size : len,
+            data : data,
+        }
+    }
+
+    fn print() -> void {
+        puts(self.data)
+    }
+
+    fn reverse() -> void {
+        let idx = 0
+
+        while idx < self.size / 2 {
+            let temp = self.data[idx]
+            self.data[idx] = self.data[self.size - idx - 1]
+            self.data[self.size - idx] = temp
+
+            idx = idx + 1
+        }
+    }
+
+    fn operator_add(rhs : String) -> String {
+        let len = self.size + rhs.size
+        let data = malloc(len + 1)
+        let idx = 0
+
+        let idx_left = 0
+
+        while idx_left < self.size {
+            data[idx] = self.data[idx_left]
+            idx = idx + 1
+            idx_left = idx_left + 1
+        }
+
+        let idx_right = 0
+        while idx_right < rhs.size {
+            data[idx] = rhs.data[idx_right]
+            idx = idx + 1
+            idx_right = idx_right + 1
+        }
+
+        data[idx] = 0i8
+
+        return String {
+            size : len,
+            data : data
+        }
+    }
+}
+
+fn main() -> i64 {
+    let test = "Hello, world!"
+    let str = String::from(test)
+
+    str.print()
+    str.reverse()
+    str.print()
+
+    let funny_string = String::from("Hello, world!") + str
+    funny_string.print()
+}

@@ -212,6 +212,15 @@ class BinaryExprAST : public BaseASTNode {
 		}
 	}
 
+    Value codegenPtr(llvm::IRBuilder<>& builder) override {
+        auto result = codegen(builder);
+        auto ptrType = getTypeRegistry()->getPointerType(result.getType());
+        auto alloc = builder.CreateAlloca(ptrType->getBase());
+        builder.CreateStore(result.getValue(), alloc);
+
+        return {alloc, ptrType};
+    }
+
 	void populateParents() override {
 		if (lhs) {
 			lhs->parent = this;

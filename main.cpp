@@ -14,7 +14,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 int main() {
-	Lexer lexer("../examples/strings.emm");
+	Lexer lexer("../examples/string_implementation.emm");
 	auto llvmContext = std::make_unique<llvm::LLVMContext>();
 	Parser parser(&lexer, std::make_unique<llvm::Module>("some_module", *llvmContext));
 
