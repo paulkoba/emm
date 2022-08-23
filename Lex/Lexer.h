@@ -492,7 +492,9 @@ class Lexer {
 
         start++;
         char* end = start;
-        while(*end != '"') {
+        bool escaped = false;
+        while(*end != '"' || escaped) {
+            escaped = (*end == '\\') && !escaped;
             end++;
         }
 

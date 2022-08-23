@@ -81,16 +81,39 @@ class NumericToken : public Token {
 };
 
 class StringLiteralToken : public Token {
-    llvm::StringRef value;
+    std::string value;
 
 public:
-    StringLiteralToken(llvm::StringRef value, std::int64_t line)
-        : Token(TokenType::STRING, line), value(value) {}
+    StringLiteralToken(llvm::StringRef valueRef, std::int64_t line, TokenType::TokenType type)
+        : Token(type, line) {
+        bool escaped = false;
 
-    StringLiteralToken(llvm::StringRef value, std::int64_t line, TokenType::TokenType type)
-        : Token(type, line), value(value) {}
+        for(char ch : valueRef) {
+            if(escaped) {
+                escaped = false;
+                switch (ch) {
+                    case 'n':
+                        value.push_back('\n');
+                        break;
+                    case 't':
+                        value.push_back('\t');
+                        break;
+                    case '\\':
+                        value.push_back('\\');
+                        break;
+                    default:
+                        value.push_back(ch);
+                }
+            } else {
+                if(ch != '\\') {
+                    value.push_back(ch);
+                }
+                escaped = ch == '\\';
+            }
+        }
+    }
 
-    [[nodiscard]] constexpr llvm::StringRef getValue() const { return value; }
+    [[nodiscard]] constexpr std::string getValue() const { return value; }
 
     ~StringLiteralToken() override = default;
 

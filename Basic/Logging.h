@@ -10,6 +10,9 @@
 
 // TODO: This doesn't work
 
+// Those raise sigsegv for now because it makes things easier to debug
+// Will need to be removed once compiler is mostly done
+
 template <typename T>
 void compilationError(int64_t line, T arg) {
 	std::cout << "Compilation error at line " << line << ": " << arg << std::endl;

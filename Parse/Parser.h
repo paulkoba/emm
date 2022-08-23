@@ -250,7 +250,7 @@ class Parser {
 
         if(lexer->peekString()) {
             auto str = lexer->consumeString();
-            return std::make_unique<StringAST>(str.getValue().str());
+            return std::make_unique<StringAST>(str.getValue());
         }
 
 		compilationError(lexer, "Unexpected token");
