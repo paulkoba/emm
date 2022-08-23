@@ -1,4 +1,5 @@
 extern fn putchar(i : i32) -> i32
+extern fn puts(str : Pointer<i8>) -> i32
 
 fn print(str : Pointer<i8>) -> void {
     let idx = 0
@@ -9,9 +10,7 @@ fn print(str : Pointer<i8>) -> void {
 }
 
 fn main() -> i64 {
-    let some_string = "Hello, world!"
-
-    print(some_string)
+    puts("Hello, world!")
 
     return 0
 }

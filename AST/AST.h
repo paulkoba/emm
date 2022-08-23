@@ -133,7 +133,21 @@ class StringAST : public BaseASTNode {
     }
 
     Value codegen(llvm::IRBuilder<> &builder) override {
-        return {builder.CreateGlobalStringPtr(value), getTypeRegistry()->getPointerType(getTypeRegistry()->getType("i8"))};
+        // I do not use CreateGlobalStringPtr because it causes weird linking issues
+        // TODO: Rework this and find out why it doesn't work properly with CreateGlobalStringPtr
+        auto str = builder.CreateAlloca(builder.getInt8Ty(), llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value.size() + 1, false)));
+
+        std::vector<llvm::Constant *> chars(value.size());
+        for(unsigned int i = 0; i < value.size(); i++) {
+            chars[i] = llvm::ConstantInt::get(builder.getInt8Ty(), value[i]);
+        }
+
+        chars.push_back(llvm::ConstantInt::get(builder.getInt8Ty(), 0));
+        auto stringType = llvm::ArrayType::get(builder.getInt8Ty(), chars.size());
+
+        builder.CreateStore(llvm::ConstantArray::get(stringType, chars), str);
+
+        return {str, getTypeRegistry()->getPointerType(getTypeRegistry()->getType("i8"))};
     }
 };
 

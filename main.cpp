@@ -35,8 +35,10 @@ int main() {
 	typeRegistry = std::make_unique<TypeRegistry>(builder);
 	r->codegen(builder);
 
-	r->getModule()->print(llvm::errs(), nullptr);
+
 	optimizeModule(*r->getModule());
+    r->getModule()->print(llvm::errs(), nullptr);
 	compile(r->getModule());
+
 	return 0;
 }
