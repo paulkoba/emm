@@ -206,7 +206,7 @@ class Parser {
 
                 auto args = parseArgList();
 
-                return std::make_unique<CallExprAST>(mangling_combine(funcName.getValue().str(), id.getValue().str()), std::move(args));
+                return std::make_unique<CallExprAST>(manglingCombine(funcName.getValue().str(), id.getValue().str()), std::move(args));
             } else {
 				return std::make_unique<VariableAST>(id.getValue().str(), "");
 			}
@@ -247,6 +247,12 @@ class Parser {
 
 			return std::move(expr);
 		}
+
+        if(lexer->peekString()) {
+            auto str = lexer->consumeString();
+            return std::make_unique<StringAST>(str.getValue().str());
+        }
+
 		compilationError(lexer, "Unexpected token");
 
 		return nullptr;
@@ -684,7 +690,8 @@ class Parser {
 
 		std::string returnType = parseType();
 
-		return std::make_unique<PrototypeAST>(!isStatic ? name.getValue().str() : mangling_combine(name.getValue().str(), structName), returnType, args, !structName.empty() && !isStatic);
+		return std::make_unique<PrototypeAST>(!isStatic ? name.getValue().str() : manglingCombine(name.getValue().str(),
+                                                                                                  structName), returnType, args, !structName.empty() && !isStatic);
 	}
 
 	std::unique_ptr<FunctionAST> parseFunction() {

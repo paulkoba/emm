@@ -25,3 +25,8 @@ extern "C" int64_t* print_ptr(int64_t* i) {
     printf("%p\n", i);
     return i;
 }
+
+extern "C" char* print_str(char* i) {
+    printf("%s\n", i);
+    return i;
+}

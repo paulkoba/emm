@@ -80,4 +80,21 @@ class NumericToken : public Token {
 	[[nodiscard]] bool operator!() const { return getType() == TokenType::NONE; }
 };
 
+class StringLiteralToken : public Token {
+    llvm::StringRef value;
+
+public:
+    StringLiteralToken(llvm::StringRef value, std::int64_t line)
+        : Token(TokenType::STRING, line), value(value) {}
+
+    StringLiteralToken(llvm::StringRef value, std::int64_t line, TokenType::TokenType type)
+        : Token(type, line), value(value) {}
+
+    [[nodiscard]] constexpr llvm::StringRef getValue() const { return value; }
+
+    ~StringLiteralToken() override = default;
+
+    [[nodiscard]] bool operator!() const { return getType() == TokenType::NONE; }
+};
+
 #endif	// EMMC_TOKEN_H

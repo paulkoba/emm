@@ -471,6 +471,40 @@ class Lexer {
 		consumeWhitespace(start, tempLine);
 		return {start, static_cast<size_t>(chars)};
 	}
+
+    [[nodiscard]] bool peekString() const {
+        char* start = current;
+        std::int64_t tempLine = line;
+        consumeWhitespace(start, tempLine);
+
+        return *start == '"';
+    }
+
+    StringLiteralToken consumeString() {
+        consumeWhitespace();
+        char* start = current;
+        std::int64_t tempLine = line;
+
+        if(*start != '"') {
+            compilationError(line, "Expected string literal, got: \"" + std::to_string(*start) + "\"");
+            return {llvm::StringRef(start, 0), tempLine, TokenType::NONE};
+        }
+
+        start++;
+        char* end = start;
+        while(*end != '"') {
+            end++;
+        }
+
+        current = end;
+        line = tempLine;
+
+        if(start > end) start = end;
+
+        ++current;
+
+        return {llvm::StringRef(start, end - start), tempLine, TokenType::STRING};
+    }
 };
 
 template <typename T>

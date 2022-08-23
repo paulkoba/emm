@@ -126,11 +126,15 @@ class StringAST : public BaseASTNode {
 	std::string value;
 
    public:
-	explicit StringAST(std::string value) : value(std::move(value)) {}
+    explicit StringAST(std::string value) : value(std::move(value)) {}
 
-	[[nodiscard]] std::string generateDOTHeader() const override {
-		return std::to_string((int64_t)this) + " [label=\"String\"]\n";
-	}
+    [[nodiscard]] std::string generateDOTHeader() const override {
+        return std::to_string((int64_t)this) + " [label=\"String " + value + "\"]\n";
+    }
+
+    Value codegen(llvm::IRBuilder<> &builder) override {
+        return {builder.CreateGlobalStringPtr(value), getTypeRegistry()->getPointerType(getTypeRegistry()->getType("i8"))};
+    }
 };
 
 class BinaryExprAST : public BaseASTNode {
