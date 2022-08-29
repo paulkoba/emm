@@ -27,7 +27,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 
-int compile(llvm::Module* module) {
+int compile(llvm::Module* module, const std::string& outputFile) {
 	// Initialize the target registry etc.
 	llvm::InitializeAllTargetInfos();
 	llvm::InitializeAllTargets();
@@ -58,9 +58,8 @@ int compile(llvm::Module* module) {
 
 	module->setDataLayout(theTargetMachine->createDataLayout());
 
-	auto filename = "output.o";
 	std::error_code ec;
-	llvm::raw_fd_ostream dest(filename, ec, llvm::sys::fs::OF_None);
+	llvm::raw_fd_ostream dest(outputFile, ec, llvm::sys::fs::OF_None);
 
 	if (ec) {
 		llvm::errs() << "Could not open file: " << ec.message();

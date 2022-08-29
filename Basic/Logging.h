@@ -15,24 +15,22 @@
 
 template <typename T>
 void compilationError(int64_t line, T arg) {
-	std::cout << "Compilation error at line " << line << ": " << arg << std::endl;
-    raise(SIGSEGV);
+	llvm::errs() << "Compilation error at line " << line << ": " << arg << "\n";
 }
 
 template <typename T>
 void compilationError(T arg) {
-	std::cout << arg << std::endl;
-    raise(SIGSEGV);
+    llvm::errs() << arg << "\n";
 }
 
 template <typename T>
 void compilationWarning(int64_t line, T arg) {
-    std::cout << "Compilation error at line " << line << ": " << arg << std::endl;
+    llvm::errs() << "Compilation error at line " << line << ": " << arg << "\n";
 }
 
 template <typename T>
 void compilationWarning(T arg) {
-    std::cout << arg << std::endl;
+    llvm::errs() << arg << "\n";
 }
 
 #endif	// EMMC_LOGGING_H

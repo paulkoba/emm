@@ -9,7 +9,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 
-void optimizeModule(llvm::Module& module) {
+void optimizeModule(llvm::Module& module, llvm::OptimizationLevel) {
 	// Create the analysis managers.
 	llvm::LoopAnalysisManager LAM;
 	llvm::FunctionAnalysisManager FAM;
