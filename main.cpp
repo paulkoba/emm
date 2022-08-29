@@ -47,10 +47,15 @@ int main(int argc, char** argv) {
             continue;
         }
 
+        if(el == "-O") {
+            optLevel = llvm::OptimizationLevel::O1;
+            continue;
+        }
+
         if(el.size() == 3 && el[0] == '-') {
             if(el == "-O0") {
                 optLevel = llvm::OptimizationLevel::O0;
-            } else if(el == "-O1" || el == "-O") {
+            } else if(el == "-O1") {
                 optLevel = llvm::OptimizationLevel::O1;
             } else if(el == "-O2") {
                 optLevel = llvm::OptimizationLevel::O2;
