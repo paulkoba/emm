@@ -5,8 +5,8 @@
 #ifndef EMMC_LOGGING_H
 #define EMMC_LOGGING_H
 
-#include <iostream>
 #include <csignal>
+#include <iostream>
 
 // TODO: This doesn't work
 
@@ -20,17 +20,17 @@ void compilationError(int64_t line, T arg) {
 
 template <typename T>
 void compilationError(T arg) {
-    llvm::errs() << arg << "\n";
+	llvm::errs() << arg << "\n";
 }
 
 template <typename T>
 void compilationWarning(int64_t line, T arg) {
-    llvm::errs() << "Compilation error at line " << line << ": " << arg << "\n";
+	llvm::errs() << "Compilation error at line " << line << ": " << arg << "\n";
 }
 
 template <typename T>
 void compilationWarning(T arg) {
-    llvm::errs() << arg << "\n";
+	llvm::errs() << arg << "\n";
 }
 
 #endif	// EMMC_LOGGING_H

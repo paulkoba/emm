@@ -117,43 +117,43 @@ class VariableAST : public BaseASTNode {
 		return {var->value.getValue(), var->value.getType()};
 	}
 
-    bool canCodegenPtr() override {
-        return true;
-    }
+	bool canCodegenPtr() override { return true; }
 };
 
 class StringAST : public BaseASTNode {
 	std::string value;
 
    public:
-    explicit StringAST(std::string value) : value(std::move(value)) {}
+	explicit StringAST(std::string value) : value(std::move(value)) {}
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        return std::to_string((int64_t)this) + " [label=\"String " + value + "\"]\n";
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		return std::to_string((int64_t)this) + " [label=\"String " + value + "\"]\n";
+	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        // I do not use CreateGlobalStringPtr because it causes weird linking issues
-        // TODO: Rework this and find out why it doesn't work properly with CreateGlobalStringPtr
-        auto str = builder.CreateAlloca(builder.getInt8Ty(), llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value.size() + 1, false)));
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		// I do not use CreateGlobalStringPtr because it causes weird linking issues
+		// TODO: Rework this and find out why it doesn't work properly with CreateGlobalStringPtr
+		auto str = builder.CreateAlloca(
+			builder.getInt8Ty(),
+			llvm::ConstantInt::get(builder.getContext(), llvm::APInt(64, value.size() + 1, false)));
 
-        std::vector<llvm::Constant *> chars(value.size());
-        for(unsigned int i = 0; i < value.size(); i++) {
-            chars[i] = llvm::ConstantInt::get(builder.getInt8Ty(), value[i]);
-        }
+		std::vector<llvm::Constant *> chars(value.size());
+		for (unsigned int i = 0; i < value.size(); i++) {
+			chars[i] = llvm::ConstantInt::get(builder.getInt8Ty(), value[i]);
+		}
 
-        chars.push_back(llvm::ConstantInt::get(builder.getInt8Ty(), 0));
-        auto stringType = llvm::ArrayType::get(builder.getInt8Ty(), chars.size());
+		chars.push_back(llvm::ConstantInt::get(builder.getInt8Ty(), 0));
+		auto stringType = llvm::ArrayType::get(builder.getInt8Ty(), chars.size());
 
-        builder.CreateStore(llvm::ConstantArray::get(stringType, chars), str);
+		builder.CreateStore(llvm::ConstantArray::get(stringType, chars), str);
 
-        return {str, getTypeRegistry()->getPointerType(getTypeRegistry()->getType("i8"))};
-    }
+		return {str, getTypeRegistry()->getPointerType(getTypeRegistry()->getType("i8"))};
+	}
 };
 
 class BinaryExprAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> lhs, rhs;
-    TokenType::TokenType op;
+	TokenType::TokenType op;
 
    public:
 	BinaryExprAST(std::unique_ptr<BaseASTNode> lhs, std::unique_ptr<BaseASTNode> rhs, TokenType::TokenType op)
@@ -163,8 +163,7 @@ class BinaryExprAST : public BaseASTNode {
 		std::string output;
 		if (lhs) output += lhs->generateDOTHeader();
 		if (rhs) output += rhs->generateDOTHeader();
-		return output + std::to_string((int64_t)this) + " [label=\"BinaryExprAST " + TokenType::toString(op) +
-			   "\"]\n";
+		return output + std::to_string((int64_t)this) + " [label=\"BinaryExprAST " + TokenType::toString(op) + "\"]\n";
 	}
 
 	std::string generateDOT() override {
@@ -212,14 +211,14 @@ class BinaryExprAST : public BaseASTNode {
 		}
 	}
 
-    Value codegenPtr(llvm::IRBuilder<>& builder) override {
-        auto result = codegen(builder);
-        auto ptrType = getTypeRegistry()->getPointerType(result.getType());
-        auto alloc = builder.CreateAlloca(ptrType->getBase());
-        builder.CreateStore(result.getValue(), alloc);
+	Value codegenPtr(llvm::IRBuilder<> &builder) override {
+		auto result = codegen(builder);
+		auto ptrType = getTypeRegistry()->getPointerType(result.getType());
+		auto alloc = builder.CreateAlloca(ptrType->getBase());
+		builder.CreateStore(result.getValue(), alloc);
 
-        return {alloc, ptrType};
-    }
+		return {alloc, ptrType};
+	}
 
 	void populateParents() override {
 		if (lhs) {
@@ -235,7 +234,7 @@ class BinaryExprAST : public BaseASTNode {
 
 class UnaryOpAST : public BaseASTNode {
 	std::unique_ptr<BaseASTNode> operand;
-    TokenType::TokenType op;
+	TokenType::TokenType op;
 
    public:
 	UnaryOpAST(std::unique_ptr<BaseASTNode> operand, TokenType::TokenType op) : operand(std::move(operand)), op(op) {}
@@ -444,15 +443,16 @@ class FunctionAST : public BaseASTNode {
 	std::unique_ptr<ScopeAST> body;
 
 	std::string structName;
-    bool isStatic;
+	bool isStatic;
 	Value returnValue;
 	llvm::BasicBlock *returnBlock = nullptr;
 
    public:
-    FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
-            : proto(std::move(proto)), body(std::move(body)), structName("") {}
+	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body)
+		: proto(std::move(proto)), body(std::move(body)), structName("") {}
 
-	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, std::string structName, bool isStatic = false)
+	FunctionAST(std::unique_ptr<PrototypeAST> proto, std::unique_ptr<ScopeAST> body, std::string structName,
+				bool isStatic = false)
 		: proto(std::move(proto)), body(std::move(body)), structName(std::move(structName)), isStatic(isStatic) {}
 
 	[[nodiscard]] std::string generateDOTHeader() const override {
@@ -952,9 +952,7 @@ class MemberAST : public BaseASTNode {
 		return {ptr, result.getType()->getMemberType(name)};
 	}
 
-    bool canCodegenPtr() override {
-        return true;
-    }
+	bool canCodegenPtr() override { return true; }
 
 	void populateParents() override {
 		if (value) {
@@ -1125,94 +1123,94 @@ class ImplAST : public BaseASTNode {
 };
 
 class StructInitializerAST : public BaseASTNode {
-    std::string structName;
-    std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members;
+	std::string structName;
+	std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members;
 
-public:
-    StructInitializerAST(std::string structName, std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members)
-            : structName(std::move(structName)), members(std::move(members)) {}
+   public:
+	StructInitializerAST(std::string structName,
+						 std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members)
+		: structName(std::move(structName)), members(std::move(members)) {}
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        std::string output = std::to_string((int64_t)this) + " [label=\"StructInitializerAST\"]\n";
-        for (const auto &member : members) {
-            output += member.second->generateDOTHeader();
-        }
-        return output;
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		std::string output = std::to_string((int64_t)this) + " [label=\"StructInitializerAST\"]\n";
+		for (const auto &member : members) {
+			output += member.second->generateDOTHeader();
+		}
+		return output;
+	}
 
-    [[nodiscard]] std::string generateDOT() override {
-        std::string output;
-        for (const auto &member : members) {
-            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)member.second.get()) + "\n";
-            output += member.second->generateDOT();
-        }
-        return output;
-    }
+	[[nodiscard]] std::string generateDOT() override {
+		std::string output;
+		for (const auto &member : members) {
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)member.second.get()) + "\n";
+			output += member.second->generateDOT();
+		}
+		return output;
+	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        auto type = getTypeRegistry()->getType(structName);
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		auto type = getTypeRegistry()->getType(structName);
 
-        auto output = type->getDefaultValue(builder);
+		auto output = type->getDefaultValue(builder);
 
-        for(auto& el : members) {
-            auto offset = type->getMemberOffset(el.first);
+		for (auto &el : members) {
+			auto offset = type->getMemberOffset(el.first);
 
-            auto rhs = el.second->codegen(builder);
+			auto rhs = el.second->codegen(builder);
 
-            if(!rhs) {
-                compilationError("Could not codegen member " + el.first);
-                return {};
-            }
+			if (!rhs) {
+				compilationError("Could not codegen member " + el.first);
+				return {};
+			}
 
-            output = builder.CreateInsertValue(output, rhs.getValue(), offset);
-        }
+			output = builder.CreateInsertValue(output, rhs.getValue(), offset);
+		}
 
-        return {output, type};
-    }
+		return {output, type};
+	}
 
-    void populateParents() override {
-        for (const auto &member : members) {
-            member.second->parent = this;
-            member.second->populateParents();
-        }
-    }
+	void populateParents() override {
+		for (const auto &member : members) {
+			member.second->parent = this;
+			member.second->populateParents();
+		}
+	}
 };
 
 class DerefAST : public BaseASTNode {
-    std::unique_ptr<BaseASTNode> pointer;
+	std::unique_ptr<BaseASTNode> pointer;
 
-public:
-    explicit DerefAST(std::unique_ptr<BaseASTNode> pointer)
-            : pointer(std::move(pointer)) {}
+   public:
+	explicit DerefAST(std::unique_ptr<BaseASTNode> pointer) : pointer(std::move(pointer)) {}
 
-    [[nodiscard]] std::string generateDOTHeader() const override {
-        std::string output = std::to_string((int64_t)this) + " [label=\"DerefAST\"]\n";
-        if (pointer) output += pointer->generateDOTHeader();
-        return output;
-    }
+	[[nodiscard]] std::string generateDOTHeader() const override {
+		std::string output = std::to_string((int64_t)this) + " [label=\"DerefAST\"]\n";
+		if (pointer) output += pointer->generateDOTHeader();
+		return output;
+	}
 
-    [[nodiscard]] std::string generateDOT() override {
-        std::string output;
-        if (pointer) {
-            output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)pointer.get()) + "\n";
-            output += pointer->generateDOT();
-        }
-        return output;
-    }
+	[[nodiscard]] std::string generateDOT() override {
+		std::string output;
+		if (pointer) {
+			output += std::to_string((int64_t)this) + " -> " + std::to_string((int64_t)pointer.get()) + "\n";
+			output += pointer->generateDOT();
+		}
+		return output;
+	}
 
-    Value codegen(llvm::IRBuilder<> &builder) override {
-        auto rhs = pointer->codegen(builder);
-        auto pointed = getTypeRegistry()->getPointedType(rhs.getType());
-        auto result = builder.CreateLoad(pointed->getBase(), rhs.getValue());
-        return {result, getTypeRegistry()->getPointedType(rhs.getType())};
-    }
+	Value codegen(llvm::IRBuilder<> &builder) override {
+		auto rhs = pointer->codegen(builder);
+		auto pointed = getTypeRegistry()->getPointedType(rhs.getType());
+		auto result = builder.CreateLoad(pointed->getBase(), rhs.getValue());
+		return {result, getTypeRegistry()->getPointedType(rhs.getType())};
+	}
 
-    void populateParents() override {
-        if (pointer) {
-            pointer->parent = this;
-            pointer->populateParents();
-        }
-    }
+	void populateParents() override {
+		if (pointer) {
+			pointer->parent = this;
+			pointer->populateParents();
+		}
+	}
 };
 
 std::unique_ptr<BaseASTNode> fromLiteral(const std::string &integer, const std::string &type) {

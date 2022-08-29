@@ -202,8 +202,8 @@ class Lexer {
 		} else if (*start == 'a' && *(start + 1) == 's') {
 			return {llvm::StringRef(operatorStart, 2), tempLine, TokenType::KW_AS};
 		} else if (*start == ':' && *(start + 1) == ':') {
-            return {llvm::StringRef(operatorStart, 2), tempLine, TokenType::DOUBLE_COLON};
-        }
+			return {llvm::StringRef(operatorStart, 2), tempLine, TokenType::DOUBLE_COLON};
+		}
 
 		// Handle operators with one character
 		switch (*start) {
@@ -472,41 +472,41 @@ class Lexer {
 		return {start, static_cast<size_t>(chars)};
 	}
 
-    [[nodiscard]] bool peekString() const {
-        char* start = current;
-        std::int64_t tempLine = line;
-        consumeWhitespace(start, tempLine);
+	[[nodiscard]] bool peekString() const {
+		char* start = current;
+		std::int64_t tempLine = line;
+		consumeWhitespace(start, tempLine);
 
-        return *start == '"';
-    }
+		return *start == '"';
+	}
 
-    StringLiteralToken consumeString() {
-        consumeWhitespace();
-        char* start = current;
-        std::int64_t tempLine = line;
+	StringLiteralToken consumeString() {
+		consumeWhitespace();
+		char* start = current;
+		std::int64_t tempLine = line;
 
-        if(*start != '"') {
-            compilationError(line, "Expected string literal, got: \"" + std::to_string(*start) + "\"");
-            return {llvm::StringRef(start, 0), tempLine, TokenType::NONE};
-        }
+		if (*start != '"') {
+			compilationError(line, "Expected string literal, got: \"" + std::to_string(*start) + "\"");
+			return {llvm::StringRef(start, 0), tempLine, TokenType::NONE};
+		}
 
-        start++;
-        char* end = start;
-        bool escaped = false;
-        while(*end != '"' || escaped) {
-            escaped = (*end == '\\') && !escaped;
-            end++;
-        }
+		start++;
+		char* end = start;
+		bool escaped = false;
+		while (*end != '"' || escaped) {
+			escaped = (*end == '\\') && !escaped;
+			end++;
+		}
 
-        current = end;
-        line = tempLine;
+		current = end;
+		line = tempLine;
 
-        if(start > end) start = end;
+		if (start > end) start = end;
 
-        ++current;
+		++current;
 
-        return {llvm::StringRef(start, end - start), tempLine, TokenType::STRING};
-    }
+		return {llvm::StringRef(start, end - start), tempLine, TokenType::STRING};
+	}
 };
 
 template <typename T>

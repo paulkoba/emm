@@ -81,43 +81,42 @@ class NumericToken : public Token {
 };
 
 class StringLiteralToken : public Token {
-    std::string value;
+	std::string value;
 
-public:
-    StringLiteralToken(llvm::StringRef valueRef, std::int64_t line, TokenType::TokenType type)
-        : Token(type, line) {
-        bool escaped = false;
+   public:
+	StringLiteralToken(llvm::StringRef valueRef, std::int64_t line, TokenType::TokenType type) : Token(type, line) {
+		bool escaped = false;
 
-        for(char ch : valueRef) {
-            if(escaped) {
-                escaped = false;
-                switch (ch) {
-                    case 'n':
-                        value.push_back('\n');
-                        break;
-                    case 't':
-                        value.push_back('\t');
-                        break;
-                    case '\\':
-                        value.push_back('\\');
-                        break;
-                    default:
-                        value.push_back(ch);
-                }
-            } else {
-                if(ch != '\\') {
-                    value.push_back(ch);
-                }
-                escaped = ch == '\\';
-            }
-        }
-    }
+		for (char ch : valueRef) {
+			if (escaped) {
+				escaped = false;
+				switch (ch) {
+					case 'n':
+						value.push_back('\n');
+						break;
+					case 't':
+						value.push_back('\t');
+						break;
+					case '\\':
+						value.push_back('\\');
+						break;
+					default:
+						value.push_back(ch);
+				}
+			} else {
+				if (ch != '\\') {
+					value.push_back(ch);
+				}
+				escaped = ch == '\\';
+			}
+		}
+	}
 
-    [[nodiscard]] constexpr std::string getValue() const { return value; }
+	[[nodiscard]] constexpr std::string getValue() const { return value; }
 
-    ~StringLiteralToken() override = default;
+	~StringLiteralToken() override = default;
 
-    [[nodiscard]] bool operator!() const { return getType() == TokenType::NONE; }
+	[[nodiscard]] bool operator!() const { return getType() == TokenType::NONE; }
 };
 
 #endif	// EMMC_TOKEN_H

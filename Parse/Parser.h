@@ -152,62 +152,63 @@ class Parser {
 		return parsePrimary();
 	}
 
-    std::unique_ptr<StructInitializerAST> parseStructInitializer(const std::string& structName) {
-        if (!lexer->consumeLeftBrace()) {
-            return nullptr;
-        }
-        std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members;
+	std::unique_ptr<StructInitializerAST> parseStructInitializer(const std::string& structName) {
+		if (!lexer->consumeLeftBrace()) {
+			return nullptr;
+		}
+		std::vector<std::pair<std::string, std::unique_ptr<BaseASTNode>>> members;
 
-        while (!lexer->peekRightBrace()) {
-            auto name = lexer->consumeIdentifier();
-            if (!name) {
-                compilationError(lexer, "Expected identifier");
-                return nullptr;
-            }
+		while (!lexer->peekRightBrace()) {
+			auto name = lexer->consumeIdentifier();
+			if (!name) {
+				compilationError(lexer, "Expected identifier");
+				return nullptr;
+			}
 
-            auto colon = lexer->consumeColon();
-            if (!colon) {
-                return nullptr;
-            }
+			auto colon = lexer->consumeColon();
+			if (!colon) {
+				return nullptr;
+			}
 
-            auto expr = parseExpression();
-            if (!expr) {
-                return nullptr;
-            }
-            members.push_back(std::make_pair<>(name.getValue().str(), std::move(expr)));
-            if (lexer->peekComma()) {
-                lexer->consumeComma();
-            }
-        }
+			auto expr = parseExpression();
+			if (!expr) {
+				return nullptr;
+			}
+			members.push_back(std::make_pair<>(name.getValue().str(), std::move(expr)));
+			if (lexer->peekComma()) {
+				lexer->consumeComma();
+			}
+		}
 
-        if (!lexer->consumeRightBrace()) {
-            return nullptr;
-        }
+		if (!lexer->consumeRightBrace()) {
+			return nullptr;
+		}
 
-        return std::make_unique<StructInitializerAST>(structName, std::move(members));
-    }
+		return std::make_unique<StructInitializerAST>(structName, std::move(members));
+	}
 
 	// NOLINTNEXTLINE(misc-no-recursion)
 	std::unique_ptr<BaseASTNode> parsePrimary() {
 		auto tryPeekIdentifier = lexer->peekIdentifier();
 		if (tryPeekIdentifier.getType() == TokenType::IDENTIFIER) {
 			auto id = lexer->consumeIdentifier();
-            if(lexer->peekLeftBrace()) {
-                return parseStructInitializer(id.getValue().str());
-            } else if (lexer->peekLeftParen()) {
+			if (lexer->peekLeftBrace()) {
+				return parseStructInitializer(id.getValue().str());
+			} else if (lexer->peekLeftParen()) {
 				lexer->consumeLeftParen();
 				auto args = parseArgList();
 
 				return std::make_unique<CallExprAST>(id.getValue().str(), std::move(args));
-			} else if(lexer->peekOperator().getType() == TokenType::DOUBLE_COLON) {
-                lexer->consumeOperator();
-                auto funcName = lexer->consumeIdentifier();
-                lexer->consumeLeftParen();
+			} else if (lexer->peekOperator().getType() == TokenType::DOUBLE_COLON) {
+				lexer->consumeOperator();
+				auto funcName = lexer->consumeIdentifier();
+				lexer->consumeLeftParen();
 
-                auto args = parseArgList();
+				auto args = parseArgList();
 
-                return std::make_unique<CallExprAST>(manglingCombine(funcName.getValue().str(), id.getValue().str()), std::move(args));
-            } else {
+				return std::make_unique<CallExprAST>(manglingCombine(funcName.getValue().str(), id.getValue().str()),
+													 std::move(args));
+			} else {
 				return std::make_unique<VariableAST>(id.getValue().str(), "");
 			}
 		}
@@ -248,10 +249,10 @@ class Parser {
 			return std::move(expr);
 		}
 
-        if(lexer->peekString()) {
-            auto str = lexer->consumeString();
-            return std::make_unique<StringAST>(str.getValue());
-        }
+		if (lexer->peekString()) {
+			auto str = lexer->consumeString();
+			return std::make_unique<StringAST>(str.getValue());
+		}
 
 		compilationError(lexer, "Unexpected token");
 
@@ -311,14 +312,14 @@ class Parser {
 					lexer->consumeLeftParen();
 					auto args = parseArgList();
 					args.insert(args.begin(), std::move(left));
-					if(member.getValue().str() == "deref") {
-                        if(args.size() != 1) {
-                            compilationError(lexer, "deref must not have any arguments");
-                        }
-                        left = std::make_unique<DerefAST>(std::move(args[0]));
-                    } else {
-                        left = std::make_unique<StructCallExprAST>(member.getValue().str(), std::move(args));
-                    }
+					if (member.getValue().str() == "deref") {
+						if (args.size() != 1) {
+							compilationError(lexer, "deref must not have any arguments");
+						}
+						left = std::make_unique<DerefAST>(std::move(args[0]));
+					} else {
+						left = std::make_unique<StructCallExprAST>(member.getValue().str(), std::move(args));
+					}
 				}
 
 				continue;
@@ -484,13 +485,13 @@ class Parser {
 				return nullptr;
 			}
 
-            bool isStatic = false;
+			bool isStatic = false;
 
-            if(fnKeyword.getType() == TokenType::KW_STATIC) {
-                fnKeyword = lexer->consumeKeyword();
+			if (fnKeyword.getType() == TokenType::KW_STATIC) {
+				fnKeyword = lexer->consumeKeyword();
 
-                isStatic = true;
-            }
+				isStatic = true;
+			}
 
 			if (fnKeyword.getType() != TokenType::TokenType::KW_FN) {
 				compilationError(lexer, "Expected keyword 'fn'");
@@ -564,7 +565,7 @@ class Parser {
 			return nullptr;
 		}
 
-        bool shouldGenerate = true;
+		bool shouldGenerate = true;
 
 		while (!lexer->peekRightBrace()) {
 			auto statement = parseStatement();
@@ -572,13 +573,13 @@ class Parser {
 				return nullptr;
 			}
 
-			if(!shouldGenerate) continue;
+			if (!shouldGenerate) continue;
 
-            if(statement->alwaysReturns()) {
-                shouldGenerate = false;
-            }
+			if (statement->alwaysReturns()) {
+				shouldGenerate = false;
+			}
 
-            statements.push_back(std::move(statement));
+			statements.push_back(std::move(statement));
 		}
 
 		auto rightBraceFound = lexer->consumeRightBrace();
@@ -641,10 +642,10 @@ class Parser {
 			return nullptr;
 		}
 
-        if(tryMatchKeyword(name.getValue().str()) != TokenType::NONE) {
-            compilationError(lexer, "Expected identifier");
-            return nullptr;
-        }
+		if (tryMatchKeyword(name.getValue().str()) != TokenType::NONE) {
+			compilationError(lexer, "Expected identifier");
+			return nullptr;
+		}
 
 		bool lparenFound = lexer->consumeLeftParen();
 		if (!lparenFound) {
@@ -693,8 +694,9 @@ class Parser {
 
 		std::string returnType = parseType();
 
-		return std::make_unique<PrototypeAST>(!isStatic ? name.getValue().str() : manglingCombine(name.getValue().str(),
-                                                                                                  structName), returnType, args, !structName.empty() && !isStatic);
+		return std::make_unique<PrototypeAST>(
+			!isStatic ? name.getValue().str() : manglingCombine(name.getValue().str(), structName), returnType, args,
+			!structName.empty() && !isStatic);
 	}
 
 	std::unique_ptr<FunctionAST> parseFunction() {
